@@ -1,0 +1,34 @@
+id: STORY-001
+name: "Criar módulo de autenticação"
+description: >
+  Como desenvolvedora, quero criar um módulo de autenticação com login e refresh token
+  para permitir acesso seguro à API e renovação de sessão sem novo login frequente.
+artifacts_dir: ./artifacts/STORY-001
+
+steps:
+  - id: specification
+    name: "Gerar especificação técnica"
+    skill: skills/specification.md
+    input:
+      user_story: "{{workflow.description}}"
+    output:
+      artifact: specification.md
+    on_existing: skip
+
+  - id: planning
+    name: "Gerar plano de implementação"
+    skill: skills/planning.md
+    input:
+      specification: "{{artifacts.specification}}"
+    output:
+      artifact: plan.md
+    on_existing: skip
+
+  - id: tasks
+    name: "Gerar tarefas de execução"
+    skill: skills/tasks.md
+    input:
+      plan: "{{artifacts.plan}}"
+    output:
+      artifact: tasks.md
+    on_existing: skip

@@ -1,0 +1,36 @@
+{
+  "name": "aiwf",
+  "version": "1.0.0",
+  "description": "AI Workflow Engine CLI",
+  "type": "module",
+  "main": "dist/cli/index.js",
+  "bin": {
+    "aiwf": "dist/cli/index.js"
+  },
+  "scripts": {
+    "build": "tsc -p tsconfig.json",
+    "dev": "tsx src/cli/index.ts",
+    "start": "node dist/cli/index.js",
+    "typecheck": "tsc -p tsconfig.json --noEmit",
+    "test": "vitest run"
+  },
+  "keywords": [
+    "cli",
+    "workflow",
+    "ai"
+  ],
+  "author": "Deysi Lopes",
+  "license": "ISC",
+  "dependencies": {
+    "chalk": "^5.6.2",
+    "commander": "^15.0.0",
+    "js-yaml": "^5.2.1",
+    "openai": "^6.45.0"
+  },
+  "devDependencies": {
+    "@types/node": "^26.1.1",
+    "tsx": "^4.23.0",
+    "typescript": "^7.0.2",
+    "vitest": "^4.1.10"
+  }
+}
