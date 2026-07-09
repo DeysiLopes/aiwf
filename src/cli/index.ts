@@ -16,6 +16,21 @@ const PACKAGE_ROOT = resolve(dirname(fileURLToPath(import.meta.url)), "../..");
 
 const program = new Command();
 
+function resolveWorkflowPath(projectRoot: string, workflowDir: string, storyId: string): string {
+  const candidates = [
+    resolve(projectRoot, workflowDir, storyId, "workflow.yaml"),
+    resolve(projectRoot, "examples", storyId, "workflow.yaml"),
+  ];
+
+  for (const candidate of candidates) {
+    if (existsSync(candidate)) {
+      return candidate;
+    }
+  }
+
+  return candidates[0];
+}
+
 program
   .name("aiwf")
   .description("AI Workflow Engine CLI — agente + especificacao dirigida")
@@ -74,10 +89,10 @@ program
   .action(async (storyId: string, options: { workflowDir: string; artifactsDir: string; dryRun?: boolean; model: string; manual?: boolean }) => {
     try {
       const projectRoot = process.cwd();
-      const workflowPath = resolve(projectRoot, options.workflowDir, storyId, "workflow.yaml");
+      const workflowPath = resolveWorkflowPath(projectRoot, options.workflowDir, storyId);
       if (!existsSync(workflowPath)) {
         console.error(chalk.red(`workflow nao encontrado: ${workflowPath}`));
-        console.error(chalk.yellow(`dica: use "aiwf create ${storyId}" para gerar um workflow`));
+        console.error(chalk.yellow(`dica: use "aiwf create ${storyId}" ou "aiwf run ${storyId} --workflow-dir examples"`));
         process.exit(1);
       }
 
@@ -124,10 +139,10 @@ program
   .action(async (storyId: string, options: { workflowDir: string; artifactsDir: string; dryRun?: boolean; model: string; manual?: boolean }) => {
     try {
       const projectRoot = process.cwd();
-      const workflowPath = resolve(projectRoot, options.workflowDir, storyId, "workflow.yaml");
+      const workflowPath = resolveWorkflowPath(projectRoot, options.workflowDir, storyId);
       if (!existsSync(workflowPath)) {
         console.error(chalk.red(`workflow nao encontrado: ${workflowPath}`));
-        console.error(chalk.yellow(`dica: use "aiwf create ${storyId}" para gerar um workflow`));
+        console.error(chalk.yellow(`dica: use "aiwf create ${storyId}" ou "aiwf resume ${storyId} --workflow-dir examples"`));
         process.exit(1);
       }
 

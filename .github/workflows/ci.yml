@@ -30,4 +30,4 @@ jobs:
       - run: npm run build
 
       - name: CLI dry-run smoke test
-        run: node dist/cli/index.js run STORY-001 --dry-run
+        run: node dist/cli/index.js run STORY-001 --dry-run --workflow-dir examples

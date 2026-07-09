@@ -91,20 +91,20 @@ extraindo as seções `## Seed do run-log` (prompt-builder) e `## Run Log Update
 Rodar sem chamar modelo (gera artefatos simulados):
 
 ```bash
-aiwf run STORY-001 --dry-run
+aiwf run STORY-001 --dry-run --workflow-dir examples
 ```
 
 Rodar com OpenAI:
 
 ```bash
 export OPENAI_API_KEY=seu_token
-aiwf run STORY-001 --model gpt-4o-mini
+aiwf run STORY-001 --model gpt-4o-mini --workflow-dir examples
 ```
 
 Após pausa para revisão humana, retomar:
 
 ```bash
-aiwf resume STORY-001
+aiwf resume STORY-001 --workflow-dir examples
 ```
 
 Arquivos gerados:
