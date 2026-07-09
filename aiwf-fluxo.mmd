@@ -1,0 +1,72 @@
+flowchart TD
+  subgraph CLI["aiwf CLI"]
+    direction LR
+    INIT["aiwf init"] --> CREATE["aiwf create"]
+    CREATE --> RUN["aiwf run / resume"]
+  end
+
+  subgraph INIT_FLOW["init"]
+    I1["cria .agents/"]
+    I2["copia skills/ (builtin)"]
+    I3["cria EXAMPLE-001/workflow.yaml"]
+    I4["cria artifacts/"]
+    I1 --> I2 --> I3 --> I4
+  end
+
+  subgraph CREATE_FLOW["create"]
+    C1["carrega generate-workflow.md"]
+    C2["template engine renderiza"]
+    C3["LLM gera workflow.yaml"]
+    C4["salva em .agents/workflows/&lt;id&gt;/"]
+    C1 --> C2 --> C3 --> C4
+  end
+
+  subgraph PHASE1["Fase 1: Entendimento"]
+    P1["prompt-builder.md"]
+    P1 -->|"artifact: prompt-inicial.md"| A1["prompt-inicial.md"]
+  end
+
+  subgraph PHASE2["Fase 2: Especificacao"]
+    P2["sdd-specify.md"] -->|"specification.md"| A2["specification.md"]
+    P3["sdd-clarify.md"] -->|"clarification.md"| A3["clarification.md"]
+  end
+
+  subgraph PHASE3["Fase 3: Planejamento"]
+    P4["sdd-plan.md"] -->|"plan.md"| A4["plan.md"]
+  end
+
+  subgraph PHASE4["Fase 4: Execucao"]
+    P5["sdd-tasks.md"] -->|"tasks.md"| A5["tasks.md"]
+    P6["sdd-implement.md"] -->|"implementacao.md"| A6["implementacao.md"]
+    P7["sdd-teste.md"] -->|"testes.md"| A7["testes.md"]
+  end
+
+  subgraph PHASE5["Fase 5: Revisao e Entrega"]
+    P8["code-reviewr.md"] -->|"review.md"| A8["review.md"]
+    P9["sdd-closer.md"] -->|"relatorio-final.md"| A9["relatorio-final.md"]
+  end
+
+  subgraph PIPELINE["Engine Pipeline"]
+    PHASE1 --> PHASE2 --> PHASE3 --> PHASE4 --> PHASE5
+  end
+
+  subgraph GIT_FLOW["Git CI/CD"]
+    GF1["feature/*"] -->|"auto PR"| GF2["develop"]
+    GF2 -->|"promote"| GF3["release/v0.x.x"]
+    GF3 -->|"auto PR"| GF4["main"]
+    GF4 -->|"tag v*"| GF5["npm publish"]
+  end
+
+  INIT -.->|"prep"| CREATE -.->|"cria workflow"| RUN
+  RUN --> PIPELINE
+  PIPELINE -.->|"code no repo"| GIT_FLOW
+
+  style INIT fill:#4a9eff
+  style CREATE fill:#4a9eff
+  style RUN fill:#4a9eff
+  style PHASE1 fill:#f9a825
+  style PHASE2 fill:#f9a825
+  style PHASE3 fill:#f9a825
+  style PHASE4 fill:#f9a825
+  style PHASE5 fill:#f9a825
+  style GIT_FLOW fill:#66bb6a
