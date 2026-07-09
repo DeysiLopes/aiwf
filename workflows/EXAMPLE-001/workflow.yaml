@@ -1,0 +1,112 @@
+id: EXAMPLE-001
+name: "Exemplo de Pipeline AIWF"
+description: >
+  Workflow de exemplo que demonstra a estrutura completa do orquestrador:
+  fases, skills, entradas/saidas, e como o agente deve criar novos workflows.
+tdd: false
+artifacts_dir: ".agents/artifacts"
+steps:
+  # ──────────────────────────────────────────────
+  # FASE 1: Entendimento e Contexto
+  # ──────────────────────────────────────────────
+  - id: prompt-builder
+    skill: "skills/prompt-builder.md"
+    type: prompt
+    on_existing: skip
+    output:
+      artifact: "EXAMPLE-001/prompt-inicial.md"
+    input:
+      story_title: "Titulo da Historia"
+      story_description: "Descricao detalhada do que precisa ser feito"
+      acceptance_criteria: |
+        - Criterio 1
+        - Criterio 2
+      context: "Contexto do projeto e motivacao"
+
+  # ──────────────────────────────────────────────
+  # FASE 2: Especificacao
+  # ──────────────────────────────────────────────
+  - id: sdd-specify
+    skill: "skills/sdd-specify.md"
+    type: prompt
+    on_existing: skip
+    output:
+      artifact: "EXAMPLE-001/specification.md"
+    input:
+      tech_stack: "Node.js 20+"
+      constraints: "Restricoes tecnicas e de negocio"
+
+  - id: sdd-clarify
+    skill: "skills/sdd-clarify.md"
+    type: prompt
+    on_existing: skip
+    output:
+      artifact: "EXAMPLE-001/clarification.md"
+    input:
+      questions: "Lista de pontos a esclarecer"
+
+  # ──────────────────────────────────────────────
+  # FASE 3: Planejamento
+  # ──────────────────────────────────────────────
+  - id: sdd-plan
+    skill: "skills/sdd-plan.md"
+    type: prompt
+    on_existing: skip
+    output:
+      artifact: "EXAMPLE-001/plan.md"
+    input:
+      approach: "Abordagem tecnica escolhida"
+      estimated_effort: "estimativa em horas ou story points"
+
+  # ──────────────────────────────────────────────
+  # FASE 4: Execucao
+  # ──────────────────────────────────────────────
+  - id: sdd-tasks
+    skill: "skills/sdd-tasks.md"
+    type: prompt
+    on_existing: skip
+    output:
+      artifact: "EXAMPLE-001/tasks.md"
+    input:
+      format: "markdown"
+
+  - id: sdd-implement
+    skill: "skills/sdd-implement.md"
+    type: prompt
+    on_existing: overwrite
+    output:
+      artifact: "EXAMPLE-001/implementacao.md"
+    input:
+      language: "javascript"
+      output_file: "src/example.js"
+
+  - id: sdd-teste
+    skill: "skills/sdd-teste.md"
+    type: prompt
+    on_existing: overwrite
+    output:
+      artifact: "EXAMPLE-001/testes.md"
+    input:
+      test_framework: "jest"
+      coverage_target: "80%"
+
+  # ──────────────────────────────────────────────
+  # FASE 5: Revisao e Entrega
+  # ──────────────────────────────────────────────
+  - id: code-reviewr
+    skill: "skills/code-reviewr.md"
+    type: prompt
+    on_existing: overwrite
+    output:
+      artifact: "EXAMPLE-001/review.md"
+    input:
+      review_focus: "seguranca, performance, boas praticas"
+
+  - id: sdd-closer
+    skill: "skills/sdd-closer.md"
+    type: prompt
+    on_existing: overwrite
+    output:
+      artifact: "EXAMPLE-001/relatorio-final.md"
+    input:
+      done: true

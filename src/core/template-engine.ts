@@ -11,29 +11,34 @@ export interface RenderContext {
 
 export class TemplateEngine {
   render(template: string, context: RenderContext): string {
-    return template.replace(/\{\{\s*([^}]+)\s*\}\}/g, (_, expression: string) => {
-      const key = expression.trim();
+    const resolve = (expr: string): string => {
+      const key = expr.trim();
       if (key.startsWith("workflow.")) {
         const workflowKey = key.replace("workflow.", "") as keyof RenderContext["workflow"];
-        const value = context.workflow[workflowKey];
-        return value ?? "";
+        return context.workflow[workflowKey] ?? "";
       }
-
       if (key.startsWith("artifacts.")) {
         const artifactKey = key.replace("artifacts.", "");
         return context.artifacts[artifactKey] ?? "";
       }
-
       if (key.startsWith("input.")) {
         const inputKey = key.replace("input.", "");
         return context.input[inputKey] ?? "";
       }
-
       if (key === "tdd") {
         return context.tdd ? "true" : "false";
       }
-
       return "";
-    });
+    };
+
+    let result = template;
+    let prev = "";
+    const MAX_PASSES = 5;
+    for (let pass = 0; pass < MAX_PASSES; pass++) {
+      if (result === prev) break;
+      prev = result;
+      result = result.replace(/\{\{\s*([^}]+)\s*\}\}/g, (_, expr: string) => resolve(expr));
+    }
+    return result;
   }
 }

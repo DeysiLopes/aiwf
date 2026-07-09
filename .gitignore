@@ -4,3 +4,4 @@ artifacts/
 .env
 docs
 .idea
+.agents/artifacts/
