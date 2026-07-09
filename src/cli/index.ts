@@ -42,7 +42,18 @@ program
       }
     }
 
-    for (const dir of [workflowsDir, artifactsDir]) {
+    const exampleDir = resolve(workflowsDir, "EXAMPLE-001");
+    const exampleFile = resolve(exampleDir, "workflow.yaml");
+    if (!existsSync(exampleFile)) {
+      mkdirSync(exampleDir, { recursive: true });
+      const builtinWorkflows = resolve(PACKAGE_ROOT, "workflows", "EXAMPLE-001", "workflow.yaml");
+      if (existsSync(builtinWorkflows)) {
+        cpSync(builtinWorkflows, exampleFile);
+        console.log(chalk.green(`criado .agents/workflows/EXAMPLE-001/workflow.yaml (exemplo)`));
+      }
+    }
+
+    for (const dir of [artifactsDir]) {
       if (!existsSync(dir)) {
         mkdirSync(dir, { recursive: true });
         console.log(chalk.green(`criado ${dir.replace(root, ".")}`));
