@@ -1,0 +1,112 @@
+name: promote develop → release
+
+on:
+  push:
+    branches:
+      - develop
+
+concurrency:
+  group: promote-develop-to-release
+  cancel-in-progress: true
+
+jobs:
+  promote:
+    runs-on: ubuntu-latest
+    permissions:
+      contents: write
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          ref: develop
+          fetch-depth: 0
+          fetch-tags: true
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 20
+
+      - name: Derive next version from conventional commits
+        id: version
+        run: |
+          LATEST=$(git tag --list 'v*' --sort=-v:refname | head -1)
+          if [ -z "$LATEST" ]; then
+            echo "tag=v0.1.0" >> "$GITHUB_OUTPUT"
+            exit 0
+          fi
+
+          MAJOR=$(echo "$LATEST" | sed 's/v//' | cut -d. -f1)
+          MINOR=$(echo "$LATEST" | sed 's/v//' | cut -d. -f2)
+          PATCH=$(echo "$LATEST" | sed 's/v//' | cut -d. -f3)
+
+          INCREMENT="patch"
+          while IFS= read -r msg; do
+            case "$msg" in
+              *"BREAKING CHANGE"*|*"!:"* )
+                INCREMENT="major"
+                break
+                ;;
+              feat:*|feat\(*:* )
+                [ "$INCREMENT" != "major" ] && INCREMENT="minor"
+                ;;
+              fix:*|fix\(*:* )
+                ;;
+            esac
+          done < <(git log "$LATEST..HEAD" --format="%s" 2>/dev/null || echo "")
+
+          case "$INCREMENT" in
+            major) MAJOR=$((MAJOR + 1)); MINOR=0; PATCH=0 ;;
+            minor) MINOR=$((MINOR + 1)); PATCH=0 ;;
+            patch) PATCH=$((PATCH + 1)) ;;
+          esac
+
+          echo "tag=v$MAJOR.$MINOR.$PATCH" >> "$GITHUB_OUTPUT"
+
+      - name: Create release branch, tag, and PR to main
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        run: |
+          TAG="${{ steps.version.outputs.tag }}"
+          RELEASE_BRANCH="release/$TAG"
+
+          echo "=== Creating/updating release branch: $RELEASE_BRANCH ==="
+          if gh api repos/${{ github.repository }}/branches/$RELEASE_BRANCH --jq '.name' &>/dev/null; then
+            echo "Branch $RELEASE_BRANCH exists — force-updating from develop"
+            git push origin +develop:$RELEASE_BRANCH
+          else
+            echo "Creating branch $RELEASE_BRANCH from develop"
+            git branch "$RELEASE_BRANCH" develop
+            git push origin "$RELEASE_BRANCH"
+          fi
+
+          echo "=== Tagging $TAG ==="
+          npm version "$TAG" --no-git-tag-version --allow-same-version
+          git add package.json
+          git commit -m "chore: bump version to $TAG"
+          git tag "$TAG"
+          git push origin "$TAG"
+
+          echo "=== Creating/updating PR $RELEASE_BRANCH → main ==="
+          COMMITS_AHEAD=$(gh api repos/${{ github.repository }}/compare/main...$RELEASE_BRANCH --jq '.ahead_by' 2>/dev/null || echo "0")
+          if [ "$COMMITS_AHEAD" -eq 0 ]; then
+            echo "No commits ahead of main. Skipping PR."
+            exit 0
+          fi
+
+          PR_NUMBER=$(gh pr list \
+            --head "$RELEASE_BRANCH" \
+            --base main \
+            --state open \
+            --json number \
+            --jq '.[0].number // empty')
+
+          if [ -n "$PR_NUMBER" ]; then
+            echo "PR #$PR_NUMBER already exists — recreating"
+            gh pr close "$PR_NUMBER" 2>/dev/null || true
+          fi
+
+          gh pr create \
+            --base main \
+            --head "$RELEASE_BRANCH" \
+            --title "chore: release $TAG → main" \
+            --body "Release PR\n\n\`$RELEASE_BRANCH\` → \`main\`"
