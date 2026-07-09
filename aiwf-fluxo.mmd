@@ -1,5 +1,6 @@
 flowchart TD
   subgraph CLI["aiwf CLI"]
+    direction LR
     init["init"] --> create["create &lt;id&gt;"]
     create --> run["run / resume &lt;id&gt;"]
   end
