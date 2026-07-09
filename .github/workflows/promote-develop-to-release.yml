@@ -69,13 +69,16 @@ jobs:
           TAG="${{ steps.version.outputs.tag }}"
           RELEASE_BRANCH="release/$TAG"
 
+          git config user.email "github-actions[bot]@users.noreply.github.com"
+          git config user.name "github-actions[bot]"
+
           echo "=== Creating/updating release branch: $RELEASE_BRANCH ==="
           if gh api repos/${{ github.repository }}/branches/$RELEASE_BRANCH --jq '.name' &>/dev/null; then
             echo "Branch $RELEASE_BRANCH exists — force-updating from develop"
             git push origin +develop:$RELEASE_BRANCH
           else
             echo "Creating branch $RELEASE_BRANCH from develop"
-            git branch "$RELEASE_BRANCH" develop
+            git checkout -b "$RELEASE_BRANCH"
             git push origin "$RELEASE_BRANCH"
           fi
 
