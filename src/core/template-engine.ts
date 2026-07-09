@@ -4,6 +4,7 @@ export interface RenderContext {
     name: string;
     description: string;
   };
+  tdd: boolean;
   artifacts: Record<string, string>;
   input: Record<string, string>;
 }
@@ -26,6 +27,10 @@ export class TemplateEngine {
       if (key.startsWith("input.")) {
         const inputKey = key.replace("input.", "");
         return context.input[inputKey] ?? "";
+      }
+
+      if (key === "tdd") {
+        return context.tdd ? "true" : "false";
       }
 
       return "";
