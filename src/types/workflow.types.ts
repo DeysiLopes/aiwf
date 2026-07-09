@@ -20,4 +20,5 @@ export interface WorkflowDefinition {
   description: string;
   artifacts_dir: string;
   steps: WorkflowStep[];
+  tdd?: boolean;
 }

@@ -32,7 +32,8 @@ export class WorkflowReader {
       name: parsed.name ?? parsed.id,
       description: parsed.description ?? "",
       artifacts_dir: parsed.artifacts_dir,
-      steps
+      steps,
+      tdd: parsed.tdd ?? false
     };
   }
 
