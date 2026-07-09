@@ -1,10 +1,10 @@
-id: STORY-001
-name: "Criar módulo de autenticação"
+id: STORY-002
+name: "Implementar feature de reset de senha (TDD)"
 description: >
-  Como desenvolvedora, quero criar um módulo de autenticação com login e refresh token
-  para permitir acesso seguro à API e renovação de sessão sem novo login frequente.
-artifacts_dir: ./artifacts/STORY-001
-tdd: false
+  Como usuária, quero poder resetar minha senha através de um link enviado por e-mail
+  para garantir que posso recuperar o acesso à minha conta de forma segura.
+artifacts_dir: ./artifacts/STORY-002
+tdd: true
 
 steps:
   - id: prompt-builder
@@ -54,18 +54,9 @@ steps:
       artifact: tasks.md
     on_existing: skip
 
-  - id: sdd-implement
-    name: "Gerar guia de implementação"
-    skill: skills/sdd-implement.md
-    input:
-      tasks: "{{artifacts.tasks}}"
-      tests: "{{artifacts.teste}}"
-    output:
-      artifact: implementation.md
-    on_existing: skip
-
+  # Em modo TDD, sdd-teste roda ANTES de sdd-implement
   - id: sdd-teste
-    name: "Gerar estratégia de testes"
+    name: "Gerar testes primeiro (TDD)"
     skill: skills/sdd-teste.md
     input:
       tasks: "{{artifacts.tasks}}"
@@ -75,12 +66,22 @@ steps:
       artifact: teste.md
     on_existing: skip
 
+  - id: sdd-implement
+    name: "Implementar para passar nos testes"
+    skill: skills/sdd-implement.md
+    input:
+      tasks: "{{artifacts.tasks}}"
+      tests: "{{artifacts.teste}}"
+    output:
+      artifact: implementation.md
+    on_existing: skip
+
   - id: code-reviewr
     name: "Revisar qualidade da entrega"
     skill: skills/code-reviewr.md
     input:
       acceptance: "{{workflow.description}}"
-      quality_criteria: "DoD padrão da equipe: código revisado, testes verdes, documentação mínima"
+      quality_criteria: "DoD padrão da equipe: testes verdes, código revisado, documentação mínima"
     output:
       artifact: review.md
     on_existing: skip
