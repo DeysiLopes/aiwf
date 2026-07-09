@@ -34,19 +34,6 @@ flowchart TD
     PB --> SP --> CL --> PL --> TK --> IM --> TE --> CR --> CLO
   end
 
-  subgraph GIT["git ci/cd"]
-    F["feature/*"]
-    DEV["develop"]
-    REL["release/v0.x.x"]
-    MAIN["main"]
-    NPM["npm publish"]
-    F -->|auto pr| DEV
-    DEV -->|promote + tag| REL
-    REL -->|auto pr| MAIN
-    MAIN -->|tag v*| NPM
-  end
-
   init -.->|prep| create
   create -.->|cria yaml| run
   run --> ENGINE
-  ENGINE -.->|commita code| GIT
