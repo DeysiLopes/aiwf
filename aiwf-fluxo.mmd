@@ -4,23 +4,23 @@ flowchart TD
     create --> run["run / resume &lt;id&gt;"]
   end
 
-  subgraph INIT[". &#10;  init"]
+  subgraph INIT["init"]
     AGENTS[".agents/"]
-    SKILLS[".agents/skills/&#10;  18 skills .md"]
-    EXAMPLE[".agents/workflows/EXAMPLE-001/&#10;  workflow.yaml"]
-    ARTIFACTS[".agents/artifacts/&#10;  (vazio)"]
+    SKILLS[".agents/skills/ (18 skills)"]
+    EXAMPLE[".agents/workflows/EXAMPLE-001/workflow.yaml"]
+    ARTIFACTS[".agents/artifacts/"]
     AGENTS --> SKILLS
     AGENTS --> EXAMPLE
     AGENTS --> ARTIFACTS
   end
 
-  subgraph CREATE[". &#10;  create"]
-    LLM_CMD["LLM + skill&#10;generate-workflow.md"]
-    GENERATED[".agents/workflows/&lt;id&gt;/&#10;  workflow.yaml"]
+  subgraph CREATE["create"]
+    LLM_CMD["LLM + generate-workflow.md"]
+    GENERATED[".agents/workflows/&lt;id&gt;/workflow.yaml"]
     LLM_CMD --> GENERATED
   end
 
-  subgraph ENGINE[". &#10;  engine pipeline"]
+  subgraph ENGINE["engine pipeline"]
     PB["prompt-builder"]
     SP["sdd-specify"]
     CL["sdd-clarify"]
