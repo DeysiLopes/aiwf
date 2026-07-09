@@ -1,0 +1,129 @@
+id: STORY-DAISIES-DB
+name: "Daisies — Single-Table DynamoDB Database Layer"
+description: >
+  Como desenvolvedora, quero implementar a camada de banco de dados do Daisies
+  usando DynamoDB single-table com o schema definido nos specs, incluindo todas as
+  entidades (PROFILE, TABLE, MENU, ORDER, SAGA, CASH, KANBAN, INTEGRATION, EVENT,
+  IDEMPOTENCY), as GSIs (StatusIndex, TableIndex), e a configuração Terraform,
+  seguindo o padrão hexagonal com Ports & Adapters, para garantir persistência
+  escalável e de baixa latência para o MVP.
+artifacts_dir: ./artifacts/STORY-DAISIES-DB
+tdd: false
+
+steps:
+  - id: prompt-builder
+    name: "Estruturar contexto do banco Daisies"
+    skill: skills/prompt-builder.md
+    input:
+      user_story: "{{workflow.description}}"
+      specs_context: |
+        ## Modelo de dados — DynamoDB single-table
+        Tabela `daisies-core`, particionada por tenant.
+        
+        | PK | SK | Entidade |
+        |---|---|---|
+        | `TENANT#{restaurantId}` | `PROFILE` | Dados cadastrais |
+        | `TENANT#{restaurantId}` | `TABLE#{tableId}` | Mesa e estado |
+        | `TENANT#{restaurantId}` | `MENU#{itemId}` | Item de cardápio |
+        | `TENANT#{restaurantId}` | `ORDER#{orderId}` | Pedido |
+        | `TENANT#{restaurantId}` | `SAGA#{sagaId}` | Estado da SAGA |
+        | `TENANT#{restaurantId}` | `SAGA#{sagaId}#STEP#{timestamp}` | Histórico append-only |
+        | `TENANT#{restaurantId}` | `CASH#{cashId}` | Movimento de caixa |
+        | `TENANT#{restaurantId}` | `KANBAN#{orderId}` | Status no board da cozinha |
+        | `TENANT#{restaurantId}` | `INTEGRATION#IFOOD` | Estado da integração |
+        | `TENANT#{restaurantId}` | `EVENT#{timestamp}#{eventId}` | Timeline de eventos |
+        | `TENANT#{restaurantId}` | `IDEMPOTENCY#{externalOrderId}` | Chave idempotente |
+
+        GSI1 — StatusIndex: PK=`TENANT#{id}#STATUS#{status}`, SK=`ORDER#{createdAt}`
+        GSI2 — TableIndex: PK=`TENANT#{id}#TABLE#{tableId}`, SK=`ORDER#{createdAt}`
+
+        Atributos: TTL (eventos, idempotency), condicional write para idempotência.
+        Terraform: PAY_PER_REQUEST, PITR só em produção, encryption enabled.
+    output:
+      artifact: prompt-inicial.md
+    on_existing: skip
+
+  - id: sdd-specify
+    name: "Gerar especificação técnica do banco"
+    skill: skills/sdd-specify.md
+    input:
+      prompt: "{{artifacts.prompt-inicial}}"
+    output:
+      artifact: specification.md
+    on_existing: skip
+
+  - id: sdd-clarify
+    name: "Clarear ambiguidades da modelagem"
+    skill: skills/sdd-clarify.md
+    input:
+      user_story: "{{workflow.description}}"
+      specification: "{{artifacts.specification}}"
+    output:
+      artifact: clarification.md
+    on_existing: skip
+
+  - id: sdd-plan
+    name: "Gerar plano de implementação"
+    skill: skills/sdd-plan.md
+    input:
+      specification: "{{artifacts.specification}}"
+      clarification: "{{artifacts.clarification}}"
+    output:
+      artifact: plan.md
+    on_existing: skip
+
+  - id: sdd-tasks
+    name: "Decompor em tarefas atômicas"
+    skill: skills/sdd-tasks.md
+    input:
+      plan: "{{artifacts.plan}}"
+    output:
+      artifact: tasks.md
+    on_existing: skip
+
+  - id: sdd-implement
+    name: "Gerar guia de implementação"
+    skill: skills/sdd-implement.md
+    input:
+      tasks: "{{artifacts.tasks}}"
+    output:
+      artifact: implementation.md
+    on_existing: skip
+
+  - id: sdd-teste
+    name: "Gerar estratégia de testes"
+    skill: skills/sdd-teste.md
+    input:
+      tasks: "{{artifacts.tasks}}"
+      implementation: "{{artifacts.implementation}}"
+      acceptance: "{{artifacts.specification}}"
+    output:
+      artifact: teste.md
+    on_existing: skip
+
+  - id: code-reviewr
+    name: "Revisar qualidade da entrega"
+    skill: skills/code-reviewr.md
+    input:
+      acceptance: "{{workflow.description}}"
+      quality_criteria: "DoD: schema validado, idempotência garantida, GSIs cobrindo access patterns, Terraform aplicável, testes de persistência"
+    output:
+      artifact: review.md
+    on_existing: skip
+
+  - id: review
+    name: "Revisão humana"
+    type: human_pause
+    prompt: >
+      Revise os artefatos gerados em {{workflow.artifacts_dir}}.
+      Verifique se a modelagem DynamoDB está completa e alinhada com os specs do Daisies.
+      Quando estiver pronto, execute: aiwf resume {{workflow.id}}
+
+  - id: sdd-closer
+    name: "Encerrar esteira"
+    skill: skills/sdd-closer.md
+    input:
+      review: "{{artifacts.review}}"
+    output:
+      artifact: closure.md
+    on_existing: skip

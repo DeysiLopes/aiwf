@@ -1,4 +1,6 @@
-import { basename, extname, resolve } from "node:path";
+import { basename, extname, resolve, dirname } from "node:path";
+import { fileURLToPath } from "node:url";
+import { existsSync } from "node:fs";
 import { StateManager } from "./state-manager.js";
 import type { WorkflowDefinition } from "../types/workflow.types.js";
 import { ArtifactManager } from "./artifact-manager.js";
@@ -6,10 +8,13 @@ import type { LlmCaller } from "./llm-caller.js";
 import { SkillLoader } from "./skill-loader.js";
 import { TemplateEngine } from "./template-engine.js";
 
+const PACKAGE_ROOT = resolve(dirname(fileURLToPath(import.meta.url)), "../..");
+
 export interface EngineOptions {
   projectRoot: string;
   workflow: WorkflowDefinition;
   dryRun: boolean;
+  manual?: boolean;
   llmCaller?: LlmCaller;
   onLog?: (message: string) => void;
 }
@@ -70,7 +75,11 @@ export class WorkflowEngine {
       }
 
       options.onLog?.(`running ${step.id}`);
-      const skillPath = resolve(options.projectRoot, step.skill!);
+
+      let skillPath = resolve(options.projectRoot, step.skill!);
+      if (!existsSync(skillPath)) {
+        skillPath = resolve(PACKAGE_ROOT, step.skill!);
+      }
       const skillTemplate = await this.skillLoader.load(skillPath);
 
       const renderedPrompt = this.templateEngine.render(skillTemplate, {
@@ -84,14 +93,31 @@ export class WorkflowEngine {
         input: step.input
       });
 
-      const output = options.dryRun
-        ? this.buildDryRunOutput(step.id, renderedPrompt)
-        : await this.callModel(renderedPrompt, options.llmCaller);
+      if (options.manual) {
+        const promptPath = resolve(artifactsRoot, `${artifactName}.prompt.md`);
+        if (await this.artifactManager.exists(artifactPath)) {
+          const existing = await this.artifactManager.read(artifactPath);
+          this.addArtifactToContext(artifactsContext, step.id, artifactName, existing);
+          options.onLog?.(`${step.id} resolvido pelo agente (${artifactName} existe)`);
+        } else {
+          await this.artifactManager.save(promptPath, renderedPrompt);
+          options.onLog?.(`prompt renderizado para ${step.id}`);
+          console.log(`\n📄 Prompt para "${step.id}" salvo em: ${promptPath}`);
+          console.log(`   Processe o prompt e salve o resultado em: ${artifactPath}`);
+          console.log(`   Depois execute: aiwf resume ${options.workflow.id} --manual\n`);
+          await stateManager.saveState({ workflowId: options.workflow.id, nextStepIndex: idx });
+          return;
+        }
+      } else {
+        const output = options.dryRun
+          ? this.buildDryRunOutput(step.id, renderedPrompt)
+          : await this.callModel(renderedPrompt, options.llmCaller);
 
-      await this.artifactManager.save(artifactPath, output);
-      await this.afterStep(artifactsRoot, step.id, output);
-      this.addArtifactToContext(artifactsContext, step.id, step.output.artifact, output);
-      options.onLog?.(`saved ${step.output.artifact}`);
+        await this.artifactManager.save(artifactPath, output);
+        await this.afterStep(artifactsRoot, step.id, output);
+        this.addArtifactToContext(artifactsContext, step.id, step.output.artifact, output);
+        options.onLog?.(`saved ${step.output.artifact}`);
+      }
 
       // clear persisted state at each successful step (so resume starts after completed step)
       await stateManager.saveState({ workflowId: options.workflow.id, nextStepIndex: idx + 1 });
