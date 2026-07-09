@@ -1,0 +1,46 @@
+flowchart TB
+
+  subgraph INIT["init"]
+    direction TB
+    AGENTS[".agents/"]
+
+    subgraph AGENT_BRANCHES[" "]
+      direction LR
+      SKILLS[".agents/skills/ (18 skills)"]
+      EXAMPLE[".agents/workflows/EXAMPLE-001/workflow.yaml"]
+      ARTIFACTS[".agents/artifacts/"]
+    end
+
+    AGENTS --> SKILLS
+    AGENTS --> EXAMPLE
+    AGENTS --> ARTIFACTS
+  end
+
+  subgraph CREATE["create"]
+    direction TB
+    LLM_CMD["LLM + generate-workflow.md"]
+    GENERATED[".agents/workflows/&lt;id&gt;/workflow.yaml"]
+    LLM_CMD --> GENERATED
+  end
+
+  subgraph CLI["aiwf CLI"]
+    direction TB
+    RUN["run / resume &lt;id&gt;"]
+  end
+
+  subgraph ENGINE["engine pipeline"]
+    direction LR
+    PB["prompt-builder"]
+    SP["sdd-specify"]
+    CL["sdd-clarify"]
+    PL["sdd-plan"]
+    TK["sdd-tasks"]
+    IM["sdd-implement"]
+    TE["sdd-teste"]
+    CR["code-reviewr"]
+    CLO["sdd-closer"]
+    PB --> SP --> CL --> PL --> TK --> IM --> TE --> CR --> CLO
+  end
+
+  INIT --> CREATE --> CLI
+  CLI --> ENGINE
