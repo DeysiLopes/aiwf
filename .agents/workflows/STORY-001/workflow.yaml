@@ -1,0 +1,48 @@
+id: STORY-001
+name: "Hello World Skill Demo"
+description: "Workflow de exemplo que demonstra o pipeline de skills do AIWF"
+tdd: false
+artifacts_dir: ".agents/artifacts"
+steps:
+  - id: prompt-builder
+    skill: "skills/prompt-builder.md"
+    type: prompt
+    on_existing: skip
+    output:
+      artifact: "STORY-001/prompt-inicial.md"
+    input:
+      story_title: "Hello World"
+      story_description: "Criar um script hello world em Node.js"
+      acceptance_criteria: |
+        - Deve imprimir "Hello World" no console
+        - Deve ser executavel com node hello.js
+      context: "Projeto de demonstracao do AIWF"
+
+  - id: sdd-specify
+    skill: "skills/sdd-specify.md"
+    type: prompt
+    on_existing: skip
+    output:
+      artifact: "STORY-001/specification.md"
+    input:
+      tech_stack: "Node.js 20+"
+      constraints: "Sem dependencias externas"
+
+  - id: sdd-tasks
+    skill: "skills/sdd-tasks.md"
+    type: prompt
+    on_existing: skip
+    output:
+      artifact: "STORY-001/tasks.md"
+    input:
+      format: "markdown"
+
+  - id: sdd-implement
+    skill: "skills/sdd-implement.md"
+    type: prompt
+    on_existing: overwrite
+    output:
+      artifact: "STORY-001/hello.js"
+    input:
+      language: "javascript"
+      output_file: "hello.js"
