@@ -22,12 +22,19 @@ jobs:
         env:
           GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
         run: |
-          BRANCH="${{ github.ref_name }}"
-          TITLE="feat: $(echo "$BRANCH" | sed 's|feature/||' | tr '-' ' ')"
+          BASE="develop"
+          HEAD="${{ github.ref_name }}"
+
+          if ! gh api repos/${{ github.repository }}/branches/$BASE --jq '.name' &>/dev/null; then
+            echo "Branch '$BASE' does not exist. Skipping PR creation."
+            exit 0
+          fi
+
+          TITLE="feat: $(echo "$HEAD" | sed 's|feature/||' | tr '-' ' ')"
 
           PR_NUMBER=$(gh pr list \
-            --head "$BRANCH" \
-            --base develop \
+            --head "$HEAD" \
+            --base "$BASE" \
             --state open \
             --json number \
             --jq '.[0].number // empty')
@@ -36,10 +43,10 @@ jobs:
             echo "PR #$PR_NUMBER already exists — updating title"
             gh pr edit "$PR_NUMBER" --title "$TITLE"
           else
-            echo "Creating PR from $BRANCH → develop"
+            echo "Creating PR from $HEAD → $BASE"
             gh pr create \
-              --base develop \
-              --head "$BRANCH" \
+              --base "$BASE" \
+              --head "$HEAD" \
               --title "$TITLE" \
-              --body "**Auto-generated PR**\n\nBranch \`$BRANCH\` → \`develop\`"
+              --body "Auto-generated PR\n\n\`$HEAD\` → \`$BASE\`"
           fi
