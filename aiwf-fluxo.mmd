@@ -1,37 +1,51 @@
 flowchart TD
-  subgraph CLI["CLI"]
-    init --> create --> run
+  subgraph CLI["aiwf CLI"]
+    init["init"] --> create["create &lt;id&gt;"]
+    create --> run["run / resume &lt;id&gt;"]
   end
 
-  subgraph INIT["init"]
-    I1[".agents/ skills/ EXAMPLE-001 artifacts/"]
+  subgraph INIT[". &#10;  init"]
+    AGENTS[".agents/"]
+    SKILLS[".agents/skills/&#10;  18 skills .md"]
+    EXAMPLE[".agents/workflows/EXAMPLE-001/&#10;  workflow.yaml"]
+    ARTIFACTS[".agents/artifacts/&#10;  (vazio)"]
+    AGENTS --> SKILLS
+    AGENTS --> EXAMPLE
+    AGENTS --> ARTIFACTS
   end
 
-  subgraph CREATE["create"]
-    C1["LLM + generate-workflow.md"]
-    C2[".agents/workflows/&lt;id&gt;/workflow.yaml"]
-    C1 --> C2
+  subgraph CREATE[". &#10;  create"]
+    LLM_CMD["LLM + skill&#10;generate-workflow.md"]
+    GENERATED[".agents/workflows/&lt;id&gt;/&#10;  workflow.yaml"]
+    LLM_CMD --> GENERATED
   end
 
-  subgraph ENGINE["engine pipeline"]
-    E1["prompt-builder"]
-    E2["sdd-specify"]
-    E3["sdd-clarify"]
-    E4["sdd-plan"]
-    E5["sdd-tasks"]
-    E6["sdd-implement"]
-    E7["sdd-teste"]
-    E8["code-reviewr"]
-    E9["sdd-closer"]
-    E1 --> E2 --> E3 --> E4 --> E5 --> E6 --> E7 --> E8 --> E9
+  subgraph ENGINE[". &#10;  engine pipeline"]
+    PB["prompt-builder"]
+    SP["sdd-specify"]
+    CL["sdd-clarify"]
+    PL["sdd-plan"]
+    TK["sdd-tasks"]
+    IM["sdd-implement"]
+    TE["sdd-teste"]
+    CR["code-reviewr"]
+    CLO["sdd-closer"]
+    PB --> SP --> CL --> PL --> TK --> IM --> TE --> CR --> CLO
   end
 
   subgraph GIT["git ci/cd"]
-    G1["feature/*"] -->|auto pr| G2["develop"]
-    G2 -->|promote| G3["release/v0.x.x"]
-    G3 -->|auto pr| G4["main"]
-    G4 -->|tag| G5["npm publish"]
+    F["feature/*"]
+    DEV["develop"]
+    REL["release/v0.x.x"]
+    MAIN["main"]
+    NPM["npm publish"]
+    F -->|auto pr| DEV
+    DEV -->|promote + tag| REL
+    REL -->|auto pr| MAIN
+    MAIN -->|tag v*| NPM
   end
 
-  init -.->|prep| create -.->|cria| run
-  run --> ENGINE -.->|code| GIT
+  init -.->|prep| create
+  create -.->|cria yaml| run
+  run --> ENGINE
+  ENGINE -.->|commita code| GIT
