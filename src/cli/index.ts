@@ -7,6 +7,8 @@ import { existsSync, mkdirSync, cpSync } from "node:fs";
 import { WorkflowEngine } from "../core/engine.js";
 import { OpenAILlmCaller } from "../core/llm-caller.js";
 import { WorkflowReader } from "../core/workflow-reader.js";
+import { SkillLoader } from "../core/skill-loader.js";
+import { TemplateEngine } from "../core/template-engine.js";
 import { dirname } from "node:path";
 import { fileURLToPath } from "node:url";
 
@@ -64,6 +66,7 @@ program
       const workflowPath = resolve(projectRoot, options.workflowDir, storyId, "workflow.yaml");
       if (!existsSync(workflowPath)) {
         console.error(chalk.red(`workflow nao encontrado: ${workflowPath}`));
+        console.error(chalk.yellow(`dica: use "aiwf create ${storyId}" para gerar um workflow`));
         process.exit(1);
       }
 
@@ -113,6 +116,7 @@ program
       const workflowPath = resolve(projectRoot, options.workflowDir, storyId, "workflow.yaml");
       if (!existsSync(workflowPath)) {
         console.error(chalk.red(`workflow nao encontrado: ${workflowPath}`));
+        console.error(chalk.yellow(`dica: use "aiwf create ${storyId}" para gerar um workflow`));
         process.exit(1);
       }
 
@@ -141,6 +145,79 @@ program
       if (!isManual) {
         console.log(chalk.green("done"));
       }
+    } catch (error) {
+      const message = error instanceof Error ? error.message : String(error);
+      console.error(chalk.red(`error: ${message}`));
+      process.exitCode = 1;
+    }
+  });
+
+program
+  .command("create")
+  .description("Gera workflow.yaml para uma historia usando LLM")
+  .argument("<story-id>", "identificador da historia, ex: STORY-001")
+  .option("--title <title>", "titulo da historia")
+  .option("--description <desc>", "descricao da historia")
+  .option("--acceptance <criteria>", "criterios de aceitacao")
+  .option("--tech-stack <stack>", "stack tecnologica", "Node.js 20+")
+  .option("--model <name>", "modelo OpenAI a usar", "gpt-4o-mini")
+  .option("--workflow-dir <path>", "diretorio base dos workflows", ".agents/workflows")
+  .action(async (storyId: string, options: {
+    title?: string;
+    description?: string;
+    acceptance?: string;
+    techStack?: string;
+    model: string;
+    workflowDir: string;
+  }) => {
+    try {
+      const projectRoot = process.cwd();
+      const workflowPath = resolve(projectRoot, options.workflowDir, storyId, "workflow.yaml");
+
+      if (existsSync(workflowPath)) {
+        console.log(chalk.yellow(`workflow ja existe: ${workflowPath}`));
+        process.exit(0);
+      }
+
+      const title = options.title ?? storyId;
+      const description = options.description ?? `Historia ${storyId}`;
+      const acceptance = options.acceptance ?? "- A ser definido";
+      const techStack = options.techStack ?? "Node.js 20+";
+
+      const skillLoader = new SkillLoader();
+      const templateEngine = new TemplateEngine();
+
+      const builtinSkillPath = resolve(PACKAGE_ROOT, "skills", "generate-workflow.md");
+      if (!existsSync(builtinSkillPath)) {
+        console.error(chalk.red(`skill generate-workflow nao encontrada em: ${builtinSkillPath}`));
+        process.exit(1);
+      }
+
+      const skillTemplate = await skillLoader.load(builtinSkillPath);
+      const renderedPrompt = templateEngine.render(skillTemplate, {
+        workflow: { id: storyId, name: title, description },
+        tdd: false,
+        artifacts: {},
+        input: {
+          story_title: title,
+          story_description: description,
+          acceptance_criteria: acceptance,
+          tech_stack: techStack
+        }
+      });
+
+      console.log(chalk.cyan(`model: ${options.model}`));
+      console.log(chalk.cyan(`gerando workflow para: ${storyId}`));
+
+      const llm = new OpenAILlmCaller(options.model);
+      const workflowYaml = await llm.call(renderedPrompt);
+
+      const dir = resolve(projectRoot, options.workflowDir, storyId);
+      mkdirSync(dir, { recursive: true });
+      const writeFile = await import("node:fs/promises").then(m => m.writeFile);
+      await writeFile(workflowPath, workflowYaml, "utf-8");
+
+      console.log(chalk.green(`workflow criado: ${workflowPath}`));
     } catch (error) {
       const message = error instanceof Error ? error.message : String(error);
       console.error(chalk.red(`error: ${message}`));
