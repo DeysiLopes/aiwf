@@ -24,6 +24,14 @@ steps:
       artifact: plan.md
     on_existing: skip
 
+  - id: review
+    name: "Revisão humana"
+    type: human_pause
+    prompt: >
+      Revise os artefatos gerados em {{workflow.artifacts_dir}} e, quando pronto, execute: aiwf resume {{workflow.id}}
+    depends_on:
+      - planning
+
   - id: tasks
     name: "Gerar tarefas de execução"
     skill: skills/tasks.md

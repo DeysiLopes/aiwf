@@ -43,11 +43,15 @@ export class WorkflowReader {
     if (!step.name) {
       throw new Error(`workflow.steps[${index}].name is required`);
     }
-    if (!step.skill) {
-      throw new Error(`workflow.steps[${index}].skill is required`);
-    }
-    if (!step.output?.artifact) {
-      throw new Error(`workflow.steps[${index}].output.artifact is required`);
+    const stepType = (step as any).type ?? "skill";
+
+    if (stepType !== "human_pause") {
+      if (!step.skill) {
+        throw new Error(`workflow.steps[${index}].skill is required`);
+      }
+      if (!step.output?.artifact) {
+        throw new Error(`workflow.steps[${index}].output.artifact is required`);
+      }
     }
 
     return {
@@ -57,7 +61,7 @@ export class WorkflowReader {
       output: step.output,
       input: this.normalizeInput(step.input),
       on_existing: step.on_existing ?? "skip",
-      type: step.type ?? "skill"
+      type: stepType as any
     };
   }
 

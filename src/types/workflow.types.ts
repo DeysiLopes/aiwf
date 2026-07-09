@@ -7,9 +7,9 @@ export interface StepOutput {
 export interface WorkflowStep {
   id: string;
   name: string;
-  skill: string;
+  skill?: string;
   input: Record<string, string>;
-  output: StepOutput;
+  output?: StepOutput;
   on_existing: OnExisting;
   type?: "skill" | "human_pause";
 }

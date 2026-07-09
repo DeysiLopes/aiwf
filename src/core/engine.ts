@@ -1,4 +1,5 @@
 import { basename, extname, resolve } from "node:path";
+import { StateManager } from "./state-manager.js";
 import type { WorkflowDefinition } from "../types/workflow.types.js";
 import { ArtifactManager } from "./artifact-manager.js";
 import type { LlmCaller } from "./llm-caller.js";
@@ -19,27 +20,53 @@ export class WorkflowEngine {
   private readonly templateEngine = new TemplateEngine();
 
   async run(options: EngineOptions): Promise<void> {
+    const stateManager = new StateManager(options.projectRoot);
+    const persisted = await stateManager.loadState(options.workflow.id);
+    const startIndex = persisted?.nextStepIndex ?? 0;
+
     const artifactsRoot = resolve(options.projectRoot, options.workflow.artifacts_dir);
     const artifactsContext: Record<string, string> = {};
 
-    for (const step of options.workflow.steps) {
+    // If resuming, try to load existing artifacts into context for earlier steps
+    for (let i = 0; i < startIndex; i++) {
+      const step = options.workflow.steps[i];
+      if (step.output?.artifact) {
+        const artifactPath = resolve(artifactsRoot, step.output.artifact);
+        if (await this.artifactManager.exists(artifactPath)) {
+          const content = await this.artifactManager.read(artifactPath);
+          this.addArtifactToContext(artifactsContext, step.id, step.output.artifact, content);
+        }
+      }
+    }
+
+    for (let idx = startIndex; idx < options.workflow.steps.length; idx++) {
+      const step = options.workflow.steps[idx];
+
       if (step.type === "human_pause") {
-        throw new Error(`Step "${step.id}" is type human_pause and is not supported in MVP`);
+        // Persist state (resume from next step)
+        await stateManager.saveState({ workflowId: options.workflow.id, nextStepIndex: idx + 1 });
+        options.onLog?.(`paused at ${step.id} (human_pause). Resume with: aiwf resume ${options.workflow.id}`);
+        return;
       }
 
-      const artifactPath = resolve(artifactsRoot, step.output.artifact);
+      if (!step.output?.artifact) {
+        throw new Error(`Step ${step.id} is missing output.artifact`);
+      }
+
+      const artifactName = step.output!.artifact;
+      const artifactPath = resolve(artifactsRoot, artifactName);
       const shouldSkip =
         step.on_existing === "skip" && (await this.artifactManager.exists(artifactPath));
 
       if (shouldSkip) {
         const existing = await this.artifactManager.read(artifactPath);
-        this.addArtifactToContext(artifactsContext, step.id, step.output.artifact, existing);
-        options.onLog?.(`skipped ${step.id} (${step.output.artifact} already exists)`);
+        this.addArtifactToContext(artifactsContext, step.id, artifactName, existing);
+        options.onLog?.(`skipped ${step.id} (${artifactName} already exists)`);
         continue;
       }
 
       options.onLog?.(`running ${step.id}`);
-      const skillPath = resolve(options.projectRoot, step.skill);
+      const skillPath = resolve(options.projectRoot, step.skill!);
       const skillTemplate = await this.skillLoader.load(skillPath);
 
       const renderedPrompt = this.templateEngine.render(skillTemplate, {
@@ -59,7 +86,13 @@ export class WorkflowEngine {
       await this.artifactManager.save(artifactPath, output);
       this.addArtifactToContext(artifactsContext, step.id, step.output.artifact, output);
       options.onLog?.(`saved ${step.output.artifact}`);
+
+      // clear persisted state at each successful step (so resume starts after completed step)
+      await stateManager.saveState({ workflowId: options.workflow.id, nextStepIndex: idx + 1 });
     }
+
+    // complete -> clear state
+    await stateManager.clearState(options.workflow.id);
   }
 
   private buildDryRunOutput(stepId: string, renderedPrompt: string): string {
