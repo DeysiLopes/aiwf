@@ -1,0 +1,116 @@
+id: STORY-daisies
+name: "Ideia para o projeto Daisies"
+description: >
+  Ideia inicial para o Daisies — descreva aqui o que você quer construir.
+artifacts_dir: /tmp/opencode/STORY-daisies/artifacts
+tdd: false
+
+steps:
+  - id: user-story-writer
+    name: "Elaborar user story a partir da ideia"
+    skill: skills/user-story-writer.md
+    input:
+      raw_idea: "{{input.raw_idea}}"
+      project_context: >
+        Daisies é um projeto pessoal ainda não implementado.
+        Descreva aqui o propósito do projeto para a skill entender o domínio.
+    output:
+      artifact: user-story.md
+    on_existing: skip
+
+  - id: prompt-builder
+    name: "Estruturar contexto inicial"
+    skill: skills/prompt-builder.md
+    input:
+      user_story: "{{artifacts.user-story}}"
+    output:
+      artifact: prompt-inicial.md
+    on_existing: skip
+
+  - id: sdd-specify
+    name: "Gerar especificação técnica"
+    skill: skills/sdd-specify.md
+    input:
+      prompt: "{{artifacts.prompt-inicial}}"
+    output:
+      artifact: specification.md
+    on_existing: skip
+
+  - id: sdd-clarify
+    name: "Clarear ambiguidades da story"
+    skill: skills/sdd-clarify.md
+    input:
+      user_story: "{{artifacts.user-story}}"
+      specification: "{{artifacts.specification}}"
+    output:
+      artifact: clarification.md
+    on_existing: skip
+
+  - id: sdd-plan
+    name: "Gerar plano de implementação"
+    skill: skills/sdd-plan.md
+    input:
+      specification: "{{artifacts.specification}}"
+      clarification: "{{artifacts.clarification}}"
+    output:
+      artifact: plan.md
+    on_existing: skip
+
+  - id: sdd-tasks
+    name: "Decompor em tarefas atômicas"
+    skill: skills/sdd-tasks.md
+    input:
+      plan: "{{artifacts.plan}}"
+    output:
+      artifact: tasks.md
+    on_existing: skip
+
+  - id: sdd-teste
+    name: "Gerar estratégia de testes"
+    skill: skills/sdd-teste.md
+    input:
+      tasks: "{{artifacts.tasks}}"
+      implementation: "{{artifacts.implementation}}"
+      acceptance: "{{artifacts.specification}}"
+    output:
+      artifact: teste.md
+    on_existing: skip
+
+  - id: sdd-implement
+    name: "Gerar guia de implementação"
+    skill: skills/sdd-implement.md
+    input:
+      tasks: "{{artifacts.tasks}}"
+      tests: "{{artifacts.teste}}"
+    output:
+      artifact: implementation.md
+    on_existing: skip
+
+  - id: code-reviewr
+    name: "Revisar qualidade da entrega"
+    skill: skills/code-reviewr.md
+    input:
+      acceptance: "{{workflow.description}}"
+      quality_criteria: "DoD padrão: user story clara, critérios de aceite testáveis, plano factível"
+    output:
+      artifact: review.md
+    on_existing: skip
+
+  - id: review
+    name: "Revisão humana"
+    type: human_pause
+    prompt: >
+      Revise os artefatos gerados em {{workflow.artifacts_dir}}.
+      Verifique se a user story está alinhada com sua visão do Daisies.
+      Quando estiver pronto, execute: aiwf resume {{workflow.id}}
+    depends_on:
+      - code-reviewr
+
+  - id: sdd-closer
+    name: "Encerrar esteira"
+    skill: skills/sdd-closer.md
+    input:
+      review: "{{artifacts.review}}"
+    output:
+      artifact: closure.md
+    on_existing: skip
