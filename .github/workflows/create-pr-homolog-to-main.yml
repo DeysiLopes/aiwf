@@ -1,0 +1,44 @@
+name: Auto PR homolog → main
+
+on:
+  push:
+    branches:
+      - homolog
+
+concurrency:
+  group: auto-pr-homolog-to-main
+  cancel-in-progress: true
+
+jobs:
+  create-pr:
+    runs-on: ubuntu-latest
+    permissions:
+      contents: read
+      pull-requests: write
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Create or update PR to main
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        run: |
+          PR_NUMBER=$(gh pr list \
+            --head homolog \
+            --base main \
+            --state open \
+            --json number \
+            --jq '.[0].number // empty')
+
+          if [ -n "$PR_NUMBER" ]; then
+            echo "PR #$PR_NUMBER already exists — updating body"
+            gh pr edit "$PR_NUMBER" \
+              --title "chore: promote homolog → main" \
+              --body "Auto-promotion PR\n\n\`homolog\` → \`main\` (updated at $(date -u +'%Y-%m-%dT%H:%M:%SZ'))"
+          else
+            echo "Creating PR from homolog → main"
+            gh pr create \
+              --base main \
+              --head homolog \
+              --title "chore: promote homolog → main" \
+              --body "Auto-promotion PR\n\n\`homolog\` → \`main\`"
+          fi

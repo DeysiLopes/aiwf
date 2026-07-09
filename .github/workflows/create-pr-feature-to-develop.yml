@@ -1,0 +1,45 @@
+name: Auto PR feature → develop
+
+on:
+  push:
+    branches:
+      - 'feature/**'
+
+concurrency:
+  group: auto-pr-feature-${{ github.ref }}
+  cancel-in-progress: false
+
+jobs:
+  create-pr:
+    runs-on: ubuntu-latest
+    permissions:
+      contents: read
+      pull-requests: write
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Create or update PR to develop
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        run: |
+          BRANCH="${{ github.ref_name }}"
+          TITLE="feat: $(echo "$BRANCH" | sed 's|feature/||' | tr '-' ' ')"
+
+          PR_NUMBER=$(gh pr list \
+            --head "$BRANCH" \
+            --base develop \
+            --state open \
+            --json number \
+            --jq '.[0].number // empty')
+
+          if [ -n "$PR_NUMBER" ]; then
+            echo "PR #$PR_NUMBER already exists — updating title"
+            gh pr edit "$PR_NUMBER" --title "$TITLE"
+          else
+            echo "Creating PR from $BRANCH → develop"
+            gh pr create \
+              --base develop \
+              --head "$BRANCH" \
+              --title "$TITLE" \
+              --body "**Auto-generated PR**\n\nBranch \`$BRANCH\` → \`develop\`"
+          fi
