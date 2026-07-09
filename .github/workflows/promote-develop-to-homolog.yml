@@ -1,0 +1,54 @@
+name: promote develop → homolog
+
+on:
+  push:
+    branches:
+      - develop
+
+concurrency:
+  group: promote-develop-to-homolog
+  cancel-in-progress: true
+
+jobs:
+  promote:
+    runs-on: ubuntu-latest
+    permissions:
+      contents: write
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          ref: develop
+          fetch-depth: 0
+          fetch-tags: true
+
+      - name: Derive next version
+        id: version
+        run: |
+          LATEST=$(git tag --list 'v*' --sort=-v:refname | head -1)
+          if [ -z "$LATEST" ]; then
+            echo "tag=v0.0.1" >> "$GITHUB_OUTPUT"
+          else
+            PATCH=$(echo "$LATEST" | sed 's/v[0-9]*\.[0-9]*\.//')
+            MAJOR_MINOR=$(echo "$LATEST" | sed 's/\.[0-9]*$//')
+            NEXT="$MAJOR_MINOR.$((PATCH + 1))"
+            echo "tag=$NEXT" >> "$GITHUB_OUTPUT"
+          fi
+
+      - name: Create homolog branch and tag
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        run: |
+          TAG="${{ steps.version.outputs.tag }}"
+
+          if gh api repos/${{ github.repository }}/branches/homolog --jq '.name' &>/dev/null; then
+            echo "homolog branch exists — fast-forwarding to develop"
+            git push origin develop:homolog
+          else
+            echo "Creating homolog branch from develop"
+            git branch homolog develop
+            git push origin homolog
+          fi
+
+          echo "Tagging $TAG"
+          git tag "$TAG" develop
+          git push origin "$TAG"
