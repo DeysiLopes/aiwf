@@ -1,72 +1,40 @@
-flowchart TD
-  subgraph CLI["aiwf CLI"]
+flowchart LR
+  subgraph CLI["CLI"]
     direction LR
-    INIT["aiwf init"] --> CREATE["aiwf create"]
-    CREATE --> RUN["aiwf run / resume"]
+    init --> create --> run
   end
 
-  subgraph INIT_FLOW["init"]
-    I1["cria .agents/"]
-    I2["copia skills/ (builtin)"]
-    I3["cria EXAMPLE-001/workflow.yaml"]
-    I4["cria artifacts/"]
-    I1 --> I2 --> I3 --> I4
+  subgraph INIT["init"]
+    I1[".agents/ skills/ EXAMPLE-001 artifacts/"]
   end
 
-  subgraph CREATE_FLOW["create"]
-    C1["carrega generate-workflow.md"]
-    C2["template engine renderiza"]
-    C3["LLM gera workflow.yaml"]
-    C4["salva em .agents/workflows/&lt;id&gt;/"]
-    C1 --> C2 --> C3 --> C4
+  subgraph CREATE["create"]
+    C1["LLM + generate-workflow.md"]
+    C2[".agents/workflows/&lt;id&gt;/workflow.yaml"]
+    C1 --> C2
   end
 
-  subgraph PHASE1["Fase 1: Entendimento"]
-    P1["prompt-builder.md"]
-    P1 -->|"artifact: prompt-inicial.md"| A1["prompt-inicial.md"]
+  subgraph ENGINE["engine pipeline"]
+    direction LR
+    E1["prompt-builder"]
+    E2["sdd-specify"]
+    E3["sdd-clarify"]
+    E4["sdd-plan"]
+    E5["sdd-tasks"]
+    E6["sdd-implement"]
+    E7["sdd-teste"]
+    E8["code-reviewr"]
+    E9["sdd-closer"]
+    E1 --> E2 --> E3 --> E4 --> E5 --> E6 --> E7 --> E8 --> E9
   end
 
-  subgraph PHASE2["Fase 2: Especificacao"]
-    P2["sdd-specify.md"] -->|"specification.md"| A2["specification.md"]
-    P3["sdd-clarify.md"] -->|"clarification.md"| A3["clarification.md"]
+  subgraph GIT["git ci/cd"]
+    direction LR
+    G1["feature/*"] -->|auto pr| G2["develop"]
+    G2 -->|promote| G3["release/v0.x.x"]
+    G3 -->|auto pr| G4["main"]
+    G4 -->|tag| G5["npm publish"]
   end
 
-  subgraph PHASE3["Fase 3: Planejamento"]
-    P4["sdd-plan.md"] -->|"plan.md"| A4["plan.md"]
-  end
-
-  subgraph PHASE4["Fase 4: Execucao"]
-    P5["sdd-tasks.md"] -->|"tasks.md"| A5["tasks.md"]
-    P6["sdd-implement.md"] -->|"implementacao.md"| A6["implementacao.md"]
-    P7["sdd-teste.md"] -->|"testes.md"| A7["testes.md"]
-  end
-
-  subgraph PHASE5["Fase 5: Revisao e Entrega"]
-    P8["code-reviewr.md"] -->|"review.md"| A8["review.md"]
-    P9["sdd-closer.md"] -->|"relatorio-final.md"| A9["relatorio-final.md"]
-  end
-
-  subgraph PIPELINE["Engine Pipeline"]
-    PHASE1 --> PHASE2 --> PHASE3 --> PHASE4 --> PHASE5
-  end
-
-  subgraph GIT_FLOW["Git CI/CD"]
-    GF1["feature/*"] -->|"auto PR"| GF2["develop"]
-    GF2 -->|"promote"| GF3["release/v0.x.x"]
-    GF3 -->|"auto PR"| GF4["main"]
-    GF4 -->|"tag v*"| GF5["npm publish"]
-  end
-
-  INIT -.->|"prep"| CREATE -.->|"cria workflow"| RUN
-  RUN --> PIPELINE
-  PIPELINE -.->|"code no repo"| GIT_FLOW
-
-  style INIT fill:#4a9eff
-  style CREATE fill:#4a9eff
-  style RUN fill:#4a9eff
-  style PHASE1 fill:#f9a825
-  style PHASE2 fill:#f9a825
-  style PHASE3 fill:#f9a825
-  style PHASE4 fill:#f9a825
-  style PHASE5 fill:#f9a825
-  style GIT_FLOW fill:#66bb6a
+  init -.->|prep| create -.->|cria| run
+  run --> ENGINE -.->|code| GIT
