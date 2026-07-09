@@ -1,6 +1,5 @@
-flowchart LR
+flowchart TD
   subgraph CLI["CLI"]
-    direction LR
     init --> create --> run
   end
 
@@ -15,7 +14,6 @@ flowchart LR
   end
 
   subgraph ENGINE["engine pipeline"]
-    direction LR
     E1["prompt-builder"]
     E2["sdd-specify"]
     E3["sdd-clarify"]
@@ -29,7 +27,6 @@ flowchart LR
   end
 
   subgraph GIT["git ci/cd"]
-    direction LR
     G1["feature/*"] -->|auto pr| G2["develop"]
     G2 -->|promote| G3["release/v0.x.x"]
     G3 -->|auto pr| G4["main"]
