@@ -7,27 +7,50 @@ artifacts_dir: ./artifacts/STORY-001
 tdd: false
 
 steps:
-  - id: prompt-builder
-    name: "Estruturar contexto inicial"
-    skill: skills/prompt-builder.md
+  - id: workflow-kickoff
+    name: "Kickoff"
+    skill: skills/workflow-kickoff/SKILL.md
     input:
-      user_story: "{{workflow.description}}"
+      story_title: "Criar módulo de autenticação"
+      story_description: "{{workflow.description}}"
+      acceptance_criteria: "Login e refresh token funcionando"
+      context: "Módulo de autenticação para API REST"
     output:
       artifact: prompt-inicial.md
     on_existing: skip
 
-  - id: sdd-specify
-    name: "Gerar especificação técnica"
-    skill: skills/sdd-specify.md
+  - id: verify-install
+    name: "Verificar ambiente"
+    skill: skills/verify-install/SKILL.md
+    input:
+      context: "Node.js API REST com JWT — verificar node, npm, git"
+    output:
+      artifact: verify-report.md
+    on_existing: skip
+
+  - id: git-setup
+    name: "Setup do repositório"
+    skill: skills/git-flow/SKILL.md
+    input:
+      action: "setup"
+      story_id: "STORY-001"
+      base_branch: "develop"
+    output:
+      artifact: git-setup.md
+    on_existing: skip
+
+  - id: specify
+    name: "Especificação técnica"
+    skill: skills/specify/SKILL.md
     input:
       prompt: "{{artifacts.prompt-inicial}}"
     output:
       artifact: specification.md
     on_existing: skip
 
-  - id: sdd-clarify
-    name: "Clarear ambiguidades da story"
-    skill: skills/sdd-clarify.md
+  - id: clarify
+    name: "Clarificação"
+    skill: skills/clarify/SKILL.md
     input:
       user_story: "{{workflow.description}}"
       specification: "{{artifacts.specification}}"
@@ -35,9 +58,9 @@ steps:
       artifact: clarification.md
     on_existing: skip
 
-  - id: sdd-plan
-    name: "Gerar plano de implementação"
-    skill: skills/sdd-plan.md
+  - id: plan
+    name: "Plano de implementação"
+    skill: skills/plan/SKILL.md
     input:
       specification: "{{artifacts.specification}}"
       clarification: "{{artifacts.clarification}}"
@@ -45,61 +68,64 @@ steps:
       artifact: plan.md
     on_existing: skip
 
-  - id: sdd-tasks
-    name: "Decompor em tarefas atômicas"
-    skill: skills/sdd-tasks.md
+  - id: tasks
+    name: "Tarefas atômicas"
+    skill: skills/tasks/SKILL.md
     input:
       plan: "{{artifacts.plan}}"
     output:
       artifact: tasks.md
     on_existing: skip
 
-  - id: sdd-implement
-    name: "Gerar guia de implementação"
-    skill: skills/sdd-implement.md
+  - id: implement
+    name: "Implementação"
+    skill: skills/implement/SKILL.md
     input:
       tasks: "{{artifacts.tasks}}"
-      tests: "{{artifacts.teste}}"
     output:
       artifact: implementation.md
-    on_existing: skip
+    on_existing: overwrite
 
-  - id: sdd-teste
-    name: "Gerar estratégia de testes"
-    skill: skills/sdd-teste.md
+  - id: test
+    name: "Testes"
+    skill: skills/test/SKILL.md
     input:
       tasks: "{{artifacts.tasks}}"
       implementation: "{{artifacts.implementation}}"
-      acceptance: "{{artifacts.specification}}"
     output:
       artifact: teste.md
-    on_existing: skip
+    on_existing: overwrite
 
-  - id: code-reviewr
-    name: "Revisar qualidade da entrega"
-    skill: skills/code-reviewr.md
+  - id: code-reviewer
+    name: "Revisão"
+    skill: skills/code-reviewer/SKILL.md
     input:
       acceptance: "{{workflow.description}}"
-      quality_criteria: "DoD padrão da equipe: código revisado, testes verdes, documentação mínima"
     output:
       artifact: review.md
-    on_existing: skip
+    on_existing: overwrite
 
   - id: review
     name: "Revisão humana"
     type: human_pause
     prompt: >
       Revise os artefatos gerados em {{workflow.artifacts_dir}}.
-      Verifique se todos os documentos estão adequados.
       Quando estiver pronto, execute: aiwf resume {{workflow.id}}
-    depends_on:
-      - code-reviewr
 
-  - id: sdd-closer
-    name: "Encerrar esteira"
-    skill: skills/sdd-closer.md
+  - id: closer
+    name: "Finalizar"
+    skill: skills/closer/SKILL.md
     input:
       review: "{{artifacts.review}}"
     output:
       artifact: closure.md
-    on_existing: skip
+    on_existing: overwrite
+
+  - id: ci-monitor
+    name: "Monitorar CI"
+    skill: skills/ci-monitor/SKILL.md
+    input:
+      pipeline_url: "url do pipeline"
+    output:
+      artifact: ci-report.md
+    on_existing: overwrite

@@ -128,8 +128,8 @@ export class WorkflowEngine {
   }
 
   private reorderForTdd(steps: WorkflowDefinition["steps"]): void {
-    const implIdx = steps.findIndex(s => s.id === "sdd-implement");
-    const testIdx = steps.findIndex(s => s.id === "sdd-teste");
+    const implIdx = steps.findIndex(s => s.id === "implement");
+    const testIdx = steps.findIndex(s => s.id === "test");
     if (implIdx < 0 || testIdx < 0) return;
     if (testIdx < implIdx) return;
 
@@ -148,13 +148,13 @@ export class WorkflowEngine {
       renderedPrompt
     ];
 
-    if (stepId === "prompt-builder") {
+    if (stepId === "workflow-kickoff") {
       lines.push(
         "",
         "## Seed do run-log",
         "",
         "- workflow_id: dry-run",
-        "- etapa_atual: prompt-builder",
+        "- etapa_atual: workflow-kickoff",
         "- inicio_da_execucao: simulado",
         "- custo_estimado_tokens: 0",
         "- custo_estimado_usd: 0.00",
@@ -193,7 +193,7 @@ export class WorkflowEngine {
 
     const runLogPath = resolve(artifactsRoot, "run-log.md");
 
-    if (stepId === "prompt-builder") {
+    if (stepId === "workflow-kickoff") {
       await this.artifactManager.save(runLogPath, `# Run Log\n\n${section}\n`);
     } else {
       const existing = (await this.artifactManager.exists(runLogPath))
@@ -204,7 +204,7 @@ export class WorkflowEngine {
   }
 
   private extractRunLogSection(content: string, stepId: string): string | null {
-    const heading = stepId === "prompt-builder"
+    const heading = stepId === "workflow-kickoff"
       ? "## Seed do run-log"
       : "## Run Log Update";
 

@@ -1,0 +1,15 @@
+flowchart TD
+    START([Review Approved]) --> CHANGE[Generate Change Plan]
+    CHANGE --> DEMO[Create Demo Documentation]
+    DEMO --> EVIDENCE[Consolidate Evidence]
+    EVIDENCE --> COMMIT[Prepare Final Commit]
+    COMMIT --> PUSH[Push to Feature Branch]
+    PUSH --> END([Pipeline Opens PR])
+
+    style START fill:#795548,stroke:#3e2723,color:#fff
+    style END fill:#4caf50,stroke:#1b5e20,color:#fff
+    style CHANGE fill:#ffffff,stroke:#795548,color:#000
+    style DEMO fill:#ffffff,stroke:#795548,color:#000
+    style EVIDENCE fill:#ffffff,stroke:#795548,color:#000
+    style COMMIT fill:#ffffff,stroke:#795548,color:#000
+    style PUSH fill:#ffffff,stroke:#795548,color:#000
