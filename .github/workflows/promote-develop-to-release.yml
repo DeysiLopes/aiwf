@@ -1,9 +1,18 @@
 name: promote develop → release
 
 on:
-  push:
-    branches:
-      - develop
+  workflow_dispatch:
+    inputs:
+      force_minor:
+        description: "Force minor version bump (default: auto from conventional commits)"
+        required: false
+        type: boolean
+        default: false
+      force_major:
+        description: "Force major version bump (default: auto from conventional commits)"
+        required: false
+        type: boolean
+        default: false
 
 concurrency:
   group: promote-develop-to-release
@@ -40,19 +49,25 @@ jobs:
           PATCH=$(echo "$LATEST" | sed 's/v//' | cut -d. -f3)
 
           INCREMENT="patch"
-          while IFS= read -r msg; do
-            case "$msg" in
-              *"BREAKING CHANGE"*|*"!:"* )
-                INCREMENT="major"
-                break
-                ;;
-              feat:*|feat\(*:* )
-                [ "$INCREMENT" != "major" ] && INCREMENT="minor"
-                ;;
-              fix:*|fix\(*:* )
-                ;;
-            esac
-          done < <(git log "$LATEST..HEAD" --format="%s" 2>/dev/null || echo "")
+          if [ "${{ inputs.force_major }}" == "true" ]; then
+            INCREMENT="major"
+          elif [ "${{ inputs.force_minor }}" == "true" ]; then
+            INCREMENT="minor"
+          else
+            while IFS= read -r msg; do
+              case "$msg" in
+                *"BREAKING CHANGE"*|*"!:"* )
+                  INCREMENT="major"
+                  break
+                  ;;
+                feat:*|feat\(*:* )
+                  [ "$INCREMENT" != "major" ] && INCREMENT="minor"
+                  ;;
+                fix:*|fix\(*:* )
+                  ;;
+              esac
+            done < <(git log "$LATEST..HEAD" --format="%s" 2>/dev/null || echo "")
+          fi
 
           case "$INCREMENT" in
             major) MAJOR=$((MAJOR + 1)); MINOR=0; PATCH=0 ;;
