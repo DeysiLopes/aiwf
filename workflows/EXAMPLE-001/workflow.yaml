@@ -6,15 +6,12 @@ description: >
 tdd: false
 artifacts_dir: ".agents/artifacts"
 steps:
-  # ──────────────────────────────────────────────
-  # FASE 1: Entendimento e Contexto
-  # ──────────────────────────────────────────────
-  - id: prompt-builder
-    skill: "skills/prompt-builder.md"
+  - id: workflow-kickoff
+    skill: "skills/workflow-kickoff/SKILL.md"
     type: prompt
     on_existing: skip
     output:
-      artifact: "EXAMPLE-001/prompt-inicial.md"
+      artifact: prompt-inicial.md
     input:
       story_title: "Titulo da Historia"
       story_description: "Descricao detalhada do que precisa ser feito"
@@ -23,90 +20,111 @@ steps:
         - Criterio 2
       context: "Contexto do projeto e motivacao"
 
-  # ──────────────────────────────────────────────
-  # FASE 2: Especificacao
-  # ──────────────────────────────────────────────
-  - id: sdd-specify
-    skill: "skills/sdd-specify.md"
+  - id: verify-install
+    skill: "skills/verify-install/SKILL.md"
     type: prompt
     on_existing: skip
     output:
-      artifact: "EXAMPLE-001/specification.md"
+      artifact: verify-report.md
+    input:
+      context: "Ambiente do projeto — verificar dependencias e ferramentas"
+
+  - id: git-setup
+    skill: "skills/git-flow/SKILL.md"
+    type: prompt
+    on_existing: skip
+    output:
+      artifact: git-setup.md
+    input:
+      action: "setup"
+      story_id: "EXAMPLE-001"
+      base_branch: "develop"
+
+  - id: specify
+    skill: "skills/specify/SKILL.md"
+    type: prompt
+    on_existing: skip
+    output:
+      artifact: specification.md
     input:
       tech_stack: "Node.js 20+"
       constraints: "Restricoes tecnicas e de negocio"
 
-  - id: sdd-clarify
-    skill: "skills/sdd-clarify.md"
+  - id: clarify
+    skill: "skills/clarify/SKILL.md"
     type: prompt
     on_existing: skip
     output:
-      artifact: "EXAMPLE-001/clarification.md"
+      artifact: clarification.md
     input:
-      questions: "Lista de pontos a esclarecer"
+      user_story: "{{workflow.description}}"
+      specification: "{{artifacts.specification}}"
 
-  # ──────────────────────────────────────────────
-  # FASE 3: Planejamento
-  # ──────────────────────────────────────────────
-  - id: sdd-plan
-    skill: "skills/sdd-plan.md"
+  - id: plan
+    skill: "skills/plan/SKILL.md"
     type: prompt
     on_existing: skip
     output:
-      artifact: "EXAMPLE-001/plan.md"
+      artifact: plan.md
     input:
-      approach: "Abordagem tecnica escolhida"
-      estimated_effort: "estimativa em horas ou story points"
+      specification: "{{artifacts.specification}}"
+      clarification: "{{artifacts.clarification}}"
 
-  # ──────────────────────────────────────────────
-  # FASE 4: Execucao
-  # ──────────────────────────────────────────────
-  - id: sdd-tasks
-    skill: "skills/sdd-tasks.md"
+  - id: tasks
+    skill: "skills/tasks/SKILL.md"
     type: prompt
     on_existing: skip
     output:
-      artifact: "EXAMPLE-001/tasks.md"
+      artifact: tasks.md
     input:
-      format: "markdown"
+      plan: "{{artifacts.plan}}"
 
-  - id: sdd-implement
-    skill: "skills/sdd-implement.md"
+  - id: implement
+    skill: "skills/implement/SKILL.md"
     type: prompt
     on_existing: overwrite
     output:
-      artifact: "EXAMPLE-001/implementacao.md"
+      artifact: implementacao.md
     input:
+      tasks: "{{artifacts.tasks}}"
       language: "javascript"
       output_file: "src/example.js"
 
-  - id: sdd-teste
-    skill: "skills/sdd-teste.md"
+  - id: test
+    skill: "skills/test/SKILL.md"
     type: prompt
     on_existing: overwrite
     output:
-      artifact: "EXAMPLE-001/testes.md"
+      artifact: testes.md
     input:
+      tasks: "{{artifacts.tasks}}"
+      implementation: "{{artifacts.implementacao}}"
       test_framework: "jest"
       coverage_target: "80%"
 
-  # ──────────────────────────────────────────────
-  # FASE 5: Revisao e Entrega
-  # ──────────────────────────────────────────────
-  - id: code-reviewr
-    skill: "skills/code-reviewr.md"
+  - id: code-reviewer
+    skill: "skills/code-reviewer/SKILL.md"
     type: prompt
     on_existing: overwrite
     output:
-      artifact: "EXAMPLE-001/review.md"
+      artifact: review.md
     input:
       review_focus: "seguranca, performance, boas praticas"
 
-  - id: sdd-closer
-    skill: "skills/sdd-closer.md"
+  - id: closer
+    skill: "skills/closer/SKILL.md"
     type: prompt
     on_existing: overwrite
     output:
-      artifact: "EXAMPLE-001/relatorio-final.md"
+      artifact: relatorio-final.md
     input:
-      done: true
+      review: "{{artifacts.review}}"
+
+  - id: ci-monitor
+    skill: "skills/ci-monitor/SKILL.md"
+    type: prompt
+    on_existing: overwrite
+    output:
+      artifact: ci-report.md
+    input:
+      pipeline_url: "url do pipeline"
