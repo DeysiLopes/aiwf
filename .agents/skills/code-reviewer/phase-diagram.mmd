@@ -1,0 +1,20 @@
+flowchart TD
+    START([Code Review Request]) --> SPEC[Validate vs Specification]
+    SPEC --> ARCH[Architecture/Domain Review]
+    ARCH --> SECURITY[Security Validation]
+    SECURITY --> BUILD[Build/Test Verification]
+    BUILD --> CONTRACT[Contract Validation]
+    CONTRACT --> OBSERV[Observability Checks]
+    OBSERV --> DECISION{All Checks Pass?}
+    DECISION -->|Yes| APPROVE([Approve])
+    DECISION -->|No| REPORT([Report Issues])
+
+    style START fill:#f44336,stroke:#b71c1c,color:#fff
+    style APPROVE fill:#4caf50,stroke:#1b5e20,color:#fff
+    style REPORT fill:#ff9800,stroke:#e65100,color:#000
+    style SPEC fill:#ffffff,stroke:#f44336,color:#000
+    style ARCH fill:#ffffff,stroke:#f44336,color:#000
+    style SECURITY fill:#ffffff,stroke:#f44336,color:#000
+    style BUILD fill:#ffffff,stroke:#f44336,color:#000
+    style CONTRACT fill:#ffffff,stroke:#f44336,color:#000
+    style OBSERV fill:#ffffff,stroke:#f44336,color:#000

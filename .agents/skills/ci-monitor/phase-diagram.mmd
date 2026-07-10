@@ -1,0 +1,30 @@
+flowchart TD
+    START([Pipeline Triggered]) --> MONITOR[Monitor Execution]
+    MONITOR --> ANALYZE[Analyze Test Results]
+    ANALYZE --> CATEGORIZE{Categorize Failure}
+
+    CATEGORIZE -->|Test Builder| REOPEN1[Reopen Test Builder]
+    CATEGORIZE -->|API Conventions| REOPEN2[Reopen API Conventions]
+    CATEGORIZE -->|Planning/Implementation| REOPEN3[Reopen Planning/Implementation]
+    CATEGORIZE -->|Environment/Infra| INFRA[Infrastructure Issue]
+    CATEGORIZE -->|Transient| RETRY[Retry Pipeline]
+
+    REOPEN1 --> EVIDENCE[Collect Evidence]
+    REOPEN2 --> EVIDENCE
+    REOPEN3 --> EVIDENCE
+    INFRA --> EVIDENCE
+    RETRY --> EVIDENCE
+
+    EVIDENCE --> REPORT[Generate Report]
+    REPORT --> END([Monitoring Complete])
+
+    style START fill:#607d8b,stroke:#37474f,color:#fff
+    style END fill:#4caf50,stroke:#1b5e20,color:#fff
+    style MONITOR fill:#ffffff,stroke:#607d8b,color:#000
+    style ANALYZE fill:#ffffff,stroke:#607d8b,color:#000
+    style CATEGORIZE fill:#ffffff,stroke:#607d8b,color:#000
+    style REOPEN1 fill:#ffccbc,stroke:#607d8b,color:#000
+    style REOPEN2 fill:#ffccbc,stroke:#607d8b,color:#000
+    style REOPEN3 fill:#ffccbc,stroke:#607d8b,color:#000
+    style INFRA fill:#ffccbc,stroke:#607d8b,color:#000
+    style RETRY fill:#ffccbc,stroke:#607d8b,color:#000

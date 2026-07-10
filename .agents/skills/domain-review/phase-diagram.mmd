@@ -1,0 +1,32 @@
+flowchart TD
+    START([Domain Review Request]) --> MODE{Validation Mode}
+    MODE -->|Architecture-Only| PLAN[Validate plan.md]
+    MODE -->|Full-Domain| CODE[Validate Code]
+
+    PLAN --> HEX1[Hexagonal DDD Structure]
+    HEX1 --> CLEAN1[Clean Code Review]
+    CLEAN1 --> CONSOLIDATE1[Consolidate Findings]
+
+    CODE --> BASELINE[Load Baseline]
+    BASELINE --> PARALLEL[Run Sub-skills in Parallel]
+    PARALLEL --> HEX2[Hexagonal DDD Structure]
+    PARALLEL --> CLEAN2[Clean Code Review]
+    PARALLEL --> TACTICAL[Tactical DDD]
+
+    HEX2 --> SEVERITY[Severity Scoring]
+    CLEAN2 --> SEVERITY
+    TACTICAL --> SEVERITY
+
+    SEVERITY --> REPORT[Generate Report]
+    CONSOLIDATE1 --> REPORT
+    REPORT --> END([Review Complete])
+
+    style START fill:#673ab7,stroke:#311b92,color:#fff
+    style END fill:#4caf50,stroke:#1b5e20,color:#fff
+    style PLAN fill:#ffffff,stroke:#673ab7,color:#000
+    style CODE fill:#ffffff,stroke:#673ab7,color:#000
+    style HEX1 fill:#e1bee7,stroke:#673ab7,color:#000
+    style HEX2 fill:#e1bee7,stroke:#673ab7,color:#000
+    style CLEAN1 fill:#e1bee7,stroke:#673ab7,color:#000
+    style CLEAN2 fill:#e1bee7,stroke:#673ab7,color:#000
+    style TACTICAL fill:#e1bee7,stroke:#673ab7,color:#000
