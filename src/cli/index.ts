@@ -1,11 +1,19 @@
 #!/usr/bin/env node
 
+import { config } from "dotenv";
+import { homedir } from "node:os";
+
 import chalk from "chalk";
 import { Command } from "commander";
 import { resolve } from "node:path";
 import { existsSync, mkdirSync, cpSync } from "node:fs";
+
+const zenEnvPath = resolve(homedir(), ".config", "opencode", ".env");
+if (existsSync(zenEnvPath)) {
+  config({ path: zenEnvPath });
+}
 import { WorkflowEngine } from "../core/engine.js";
-import { OpenAILlmCaller } from "../core/llm-caller.js";
+import { OpenAILlmCaller, type AiProvider } from "../core/llm-caller.js";
 import { WorkflowReader } from "../core/workflow-reader.js";
 import { SkillLoader } from "../core/skill-loader.js";
 import { TemplateEngine } from "../core/template-engine.js";
@@ -84,9 +92,10 @@ program
   .option("--workflow-dir <path>", "diretorio base dos workflows", ".agents/workflows")
   .option("--artifacts-dir <path>", "diretorio base dos artefatos", ".agents/artifacts")
   .option("--dry-run", "simular execucao sem chamar LLM")
-  .option("--model <name>", "modelo OpenAI a usar", "gpt-4o-mini")
+  .option("--model <name>", "modelo a usar", "big-pickle")
+  .option("--provider <provider>", "provedor (openai|zen)", "zen")
   .option("--manual", "modo agente: renderiza prompt e aguarda artifact externo")
-  .action(async (storyId: string, options: { workflowDir: string; artifactsDir: string; dryRun?: boolean; model: string; manual?: boolean }) => {
+  .action(async (storyId: string, options: { workflowDir: string; artifactsDir: string; dryRun?: boolean; model: string; provider: AiProvider; manual?: boolean }) => {
     try {
       const projectRoot = process.cwd();
       const workflowPath = resolveWorkflowPath(projectRoot, options.workflowDir, storyId);
@@ -107,7 +116,7 @@ program
       console.log(chalk.cyan(`workflow: ${workflow.id}`));
       console.log(chalk.cyan(`mode: ${isManual ? "manual (agente)" : options.dryRun ? "dry-run" : "auto"}`));
 
-      const llmCaller = (options.dryRun || isManual) ? undefined : new OpenAILlmCaller(options.model);
+      const llmCaller = (options.dryRun || isManual) ? undefined : new OpenAILlmCaller(options.model, options.provider);
 
       await engine.run({
         projectRoot,
@@ -134,9 +143,10 @@ program
   .option("--workflow-dir <path>", "diretorio base dos workflows", ".agents/workflows")
   .option("--artifacts-dir <path>", "diretorio base dos artefatos", ".agents/artifacts")
   .option("--dry-run", "simular execucao sem chamar LLM")
-  .option("--model <name>", "modelo OpenAI a usar", "gpt-4o-mini")
+  .option("--model <name>", "modelo a usar", "big-pickle")
+  .option("--provider <provider>", "provedor (openai|zen)", "zen")
   .option("--manual", "modo agente: renderiza prompt e aguarda artifact externo")
-  .action(async (storyId: string, options: { workflowDir: string; artifactsDir: string; dryRun?: boolean; model: string; manual?: boolean }) => {
+  .action(async (storyId: string, options: { workflowDir: string; artifactsDir: string; dryRun?: boolean; model: string; provider: AiProvider; manual?: boolean }) => {
     try {
       const projectRoot = process.cwd();
       const workflowPath = resolveWorkflowPath(projectRoot, options.workflowDir, storyId);
@@ -157,7 +167,7 @@ program
       console.log(chalk.cyan(`resuming: ${workflow.id}`));
       console.log(chalk.cyan(`mode: ${isManual ? "manual (agente)" : options.dryRun ? "dry-run" : "auto"}`));
 
-      const llmCaller = (options.dryRun || isManual) ? undefined : new OpenAILlmCaller(options.model);
+      const llmCaller = (options.dryRun || isManual) ? undefined : new OpenAILlmCaller(options.model, options.provider);
 
       await engine.run({
         projectRoot,
@@ -186,7 +196,8 @@ program
   .option("--description <desc>", "descricao da historia")
   .option("--acceptance <criteria>", "criterios de aceitacao")
   .option("--tech-stack <stack>", "stack tecnologica", "Node.js 20+")
-  .option("--model <name>", "modelo OpenAI a usar", "gpt-4o-mini")
+  .option("--model <name>", "modelo a usar", "big-pickle")
+  .option("--provider <provider>", "provedor (openai|zen)", "zen")
   .option("--workflow-dir <path>", "diretorio base dos workflows", ".agents/workflows")
   .action(async (storyId: string, options: {
     title?: string;
@@ -194,6 +205,7 @@ program
     acceptance?: string;
     techStack?: string;
     model: string;
+    provider: AiProvider;
     workflowDir: string;
   }) => {
     try {
@@ -233,9 +245,10 @@ program
       });
 
       console.log(chalk.cyan(`model: ${options.model}`));
+      console.log(chalk.cyan(`provider: ${options.provider}`));
       console.log(chalk.cyan(`gerando workflow para: ${storyId}`));
 
-      const llm = new OpenAILlmCaller(options.model);
+      const llm = new OpenAILlmCaller(options.model, options.provider);
       const workflowYaml = await llm.call(renderedPrompt);
 
       const dir = resolve(projectRoot, options.workflowDir, storyId);
