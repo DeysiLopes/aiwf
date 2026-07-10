@@ -117,6 +117,7 @@ O `aiwf` lê esse arquivo automaticamente ao iniciar. Modelo padrão: `big-pickl
 aiwf run STORY-001
 aiwf run STORY-001 --model gpt-5.3-codex
 aiwf run STORY-001 --provider zen --model big-pickle
+aiwf run STORY-001 --dry-run --workflow-dir examples
 ```
 
 ### OpenAI (alternativo)

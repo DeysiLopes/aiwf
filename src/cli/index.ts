@@ -3,22 +3,21 @@
 import { config } from "dotenv";
 import { homedir } from "node:os";
 
-import chalk from "chalk";
-import { Command } from "commander";
-import { resolve } from "node:path";
-import { existsSync, mkdirSync, cpSync } from "node:fs";
-
 const zenEnvPath = resolve(homedir(), ".config", "opencode", ".env");
 if (existsSync(zenEnvPath)) {
   config({ path: zenEnvPath });
 }
+
+import chalk from "chalk";
+import { Command } from "commander";
+import { resolve, dirname } from "node:path";
+import { existsSync, mkdirSync, cpSync } from "node:fs";
+import { fileURLToPath } from "node:url";
 import { WorkflowEngine } from "../core/engine.js";
 import { OpenAILlmCaller, type AiProvider } from "../core/llm-caller.js";
 import { WorkflowReader } from "../core/workflow-reader.js";
 import { SkillLoader } from "../core/skill-loader.js";
 import { TemplateEngine } from "../core/template-engine.js";
-import { dirname } from "node:path";
-import { fileURLToPath } from "node:url";
 
 const PACKAGE_ROOT = resolve(dirname(fileURLToPath(import.meta.url)), "../..");
 
