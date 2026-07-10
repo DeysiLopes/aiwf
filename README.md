@@ -16,89 +16,120 @@ npm run build
 npm link
 ```
 
-## Estrutura do MVP
+## Estrutura do projeto
 
 - `src/core`: motor do workflow
 - `src/cli`: comando `aiwf`
-- `skills/`: prompts das skills
-- `examples/STORY-001/workflow.yaml`: fluxo de exemplo
+- `skills/`: skills (agnósticas em inglês em `skills/<nome>/SKILL.md`)
+- `(finops movido para ideias/finops — backlog)`
+- `workflows/`: definições de workflow YAML de exemplo
+- `docs/`: diagramas e documentação complementar
 
 ## Catalogo de skills
 
-### Esteira principal (ordem de execução)
+### Skills da esteira principal (ordem de execução)
 
-| # | Skill | Artefato gerado |
-|---|---|---|
-| 1 | `prompt-builder` | `prompt-inicial.md` |
-| 2 | `sdd-specify` | `specification.md` |
-| 3 | `sdd-clarify` | `clarification.md` |
-| 4 | `sdd-plan` | `plan.md` |
-| 5 | `sdd-tasks` | `tasks.md` |
-| 6 | `sdd-implement` | `implementation.md` |
-| 7 | `sdd-teste` | `teste.md` |
-| 8 | `code-reviewr` | `review.md` |
-| 9 | `sdd-closer` | `closure.md` |
+| # | Skill (Agnóstica) | Artefato gerado | Equivalente legado |
+|---|---|---|---|---|
+| 1 | `workflow-kickoff` | `prompt-inicial.md`, seed run-log | `prompt-builder` |
+| 2 | `verify-install` | `verify-report.md` | — |
+| 3 | `git-flow` (setup) | `git-setup.md` | — |
+| 4 | `specify` | `specification.md` | `sdd-specify` |
+| 5 | `clarify` | `clarification.md` | `sdd-clarify` |
+| 6 | `plan` | `plan.md` | `sdd-plan` |
+| 7 | `tasks` | `tasks.md` | `sdd-tasks` |
+| 8 | `implement` | `implementation.md` | `sdd-implement` |
+| 9 | `test` | `teste.md` | `sdd-teste` |
+| 10 | `code-reviewer` | `review.md` | `code-reviewr` |
+| 11 | `closer` | `closure.md` | `sdd-closer` |
+| 12 | `ci-monitor` | `ci-report.md` | — |
 
-### Transversais / on-demand
+### Skills transversais / on-demand
 
 | Skill | Tipo | Chamada por |
 |---|---|---|
-| `brainstorming-ideacao` | on-demand | `sdd-clarify` |
-| `java-arquitetura` | transversal | `code-reviewr` |
-| `boas-praticas-engenharia` | transversal | `code-reviewr` |
-| `sdd-custo` | transversal/paralela | esteira inteira (atualiza `run-log.md` via MCP) |
-
-### Aliases (compatibilidade com MVP inicial)
-
-- `skills/specification.md` → alias de `sdd-specify`
-- `skills/planning.md` → alias de `sdd-plan`
-- `skills/tasks.md` → alias de `sdd-tasks`
+| `brainstorming` | ideação pré-especificação | `workflow-kickoff`, `specify` |
+| `cloud-solution-architect` | arquitetura cloud | `plan`, `code-reviewer` |
+| `engineering-best-practices` | boas práticas | `code-reviewer` |
+| `domain-review` | validação opcional | `plan`, `code-reviewer` |
+| `clean-code-review` | revisão qualidade | `code-reviewer` |
+| `java-architecture` | validação Java | `code-reviewer` |
+| `hexagonal-ddd-structure` | validação DDD | `domain-review` |
+| `exception-handling` | padrão erro | `code-reviewer` |
+| `api-conventions` | contrato API | `code-reviewer` |
+| `git-flow` | branch/commit/PR | transversal |
+| `observability-patterns` | observabilidade | `code-reviewer` |
+| `ai-cost-manager` | custo IA (via MCP) | esteira inteira |
+| `requirements-fetch` | fetch requisitos | `workflow-kickoff` |
+| `artifact-builder` | meta-skill para contribuir artefatos | (manual) |
+| `chaos-validation` | resiliência pós-deploy | pós-`ci-monitor` |
+| `database-proxy` | acesso DB seguro | `implement` |
+| `local-spring-run` | execução local Spring | `implement` |
+| `proxy-configuration` | proxy corporativo | (setup) |
 
 ## Pipeline completo
 
 ```
 User Story (texto)
        ↓
-[prompt-builder]     →  prompt-inicial.md, cria run-log.md
-       ↘
- [sdd-custo]         →  atualiza consumo/custo no run-log.md (paralelo via MCP)
+[workflow-kickoff]        →  prompt-inicial.md, seed do run-log
        ↓
-[sdd-specify]        →  specification.md
+[verify-install]          →  verify-report.md, atualiza run-log
        ↓
-[sdd-clarify]        →  clarification.md
+[git-setup]               →  git-setup.md, atualiza run-log
        ↓
-[sdd-plan]           →  plan.md
+[specify]                 →  specification.md, atualiza run-log
        ↓
-[sdd-tasks]          →  tasks.md
+[clarify]                 →  clarification.md, atualiza run-log
        ↓
-[sdd-implement]      →  implementation.md
+[plan]                    →  plan.md, atualiza run-log
        ↓
-[sdd-teste]          →  teste.md
+[tasks]                   →  tasks.md, atualiza run-log
        ↓
-[code-reviewr]       →  review.md
+[implement]               →  implementation.md, atualiza run-log
        ↓
-[ human_pause ]      ←  revisão humana
+[test]                    →  teste.md, atualiza run-log
        ↓
-[sdd-closer]         →  closure.md, finaliza run-log.md
+[code-reviewer]           →  review.md, atualiza run-log
+       ↓
+[ human_pause ]           ←  revisão humana
+       ↓
+[closer]                  →  closure.md, atualiza run-log
+       ↓
+[ci-monitor]              →  ci-report.md, atualiza run-log
 ```
 
-O `run-log.md` é consolidado automaticamente pelo motor a cada etapa,
-extraindo as seções `## Seed do run-log` (prompt-builder) e `## Run Log Update`
-(demais skills) de cada artefato gerado.
+O `run-log.md` é consolidado automaticamente pelo motor a cada etapa.
 
-## Execução
+## Configuração do provedor AI
 
-Rodar sem chamar modelo (gera artefatos simulados):
+### Opencode Zen (padrão)
+
+Coloque sua chave no arquivo `~/.config/opencode/.env`:
+
+```env
+OPENCODE_API_KEY=sk-...
+```
+
+O `aiwf` lê esse arquivo automaticamente ao iniciar. Modelo padrão: `big-pickle`.
 
 ```bash
-aiwf run STORY-001 --dry-run --workflow-dir examples
+aiwf run STORY-001
+aiwf run STORY-001 --model gpt-5.3-codex
+aiwf run STORY-001 --provider zen --model big-pickle
 ```
 
-Rodar com OpenAI:
+### OpenAI (alternativo)
 
 ```bash
 export OPENAI_API_KEY=seu_token
-aiwf run STORY-001 --model gpt-4o-mini --workflow-dir examples
+aiwf run STORY-001 --provider openai --model gpt-4o-mini
+```
+
+### Dry-run (sem chamar modelo)
+
+```bash
+aiwf run STORY-001 --dry-run --workflow-dir examples
 ```
 
 Após pausa para revisão humana, retomar:
