@@ -1,13 +1,13 @@
-name: CI
+name: CI — develop
 
 on:
   pull_request:
-    branches: [develop, pre-release, main]
+    branches: [develop]
   push:
-    branches: [develop, pre-release, main]
+    branches: [develop]
 
 concurrency:
-  group: ci-${{ github.ref }}
+  group: ci-develop-${{ github.ref }}
   cancel-in-progress: true
 
 jobs:

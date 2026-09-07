@@ -36,18 +36,29 @@ npm link
 | 3 | `git-flow` (setup) | `git-setup.md` | — |
 | 4 | `specify` | `specification.md` | `sdd-specify` |
 | 5 | `clarify` | `clarification.md` | `sdd-clarify` |
-| 6 | `plan` | `plan.md` | `sdd-plan` |
-| 7 | `tasks` | `tasks.md` | `sdd-tasks` |
-| 8 | `implement` | `implementation.md` | `sdd-implement` |
-| 9 | `test` | `teste.md` | `sdd-teste` |
-| 10 | `code-reviewer` | `review.md` | `code-reviewr` |
-| 11 | `closer` | `closure.md` | `sdd-closer` |
-| 12 | `ci-monitor` | `ci-report.md` | — |
+| 6 | `context` | `CONTEXT.md` | `sdd-context` |
+| 7 | `plan` | `plan.md` | `sdd-plan` |
+| 8 | `tasks` | `tasks.md` | `sdd-tasks` |
+| 9 | `implement` | `implementation.md` | `sdd-implement` |
+| 10 | `test` | `teste.md` | `sdd-teste` |
+| 11 | `code-reviewer` | `review.md` | `code-reviewr` |
+| 12 | `closer` | `closure.md` | `sdd-closer` |
+| 13 | `ci-monitor` | `ci-report.md` | — |
 
 ### Skills transversais / on-demand
 
 | Skill | Tipo | Chamada por |
 |---|---|---|
+| `grilling` | primitiva de entrevista (design tree/frontier) | `clarify` |
+| `wayfinder` | planejamento de esforço grande via tickets de decisão (mapa) | `workflow-kickoff` (esforços > 1 sessão) |
+| `diagnosing-bugs` | disciplina de diagnóstico/debug (feedback loop) | on-demand (bug/perf) |
+| `research` | sub-agente de pesquisa contra fontes primárias | `wayfinder` |
+| `prototype` | protótipo descartável (LOGIC.md/UI.md) | `wayfinder` |
+| `wizard` | wizard bash interativo para passos manuais | on-demand (provisionamento/setup) |
+| `teach` | captura de aprendizado por sessão | on-demand |
+| `handoff` | resumo de handover (`HANDOFF.md`) | on-demand (fim de jornada) |
+| `to-questionnaire` | transforma bullets em questionário | on-demand (refino de proposta) |
+| `writing-for-agents` | meta-skill p/ escrita orientada a agentes | todos os docs/skills |
 | `brainstorming` | ideação pré-especificação | `workflow-kickoff`, `specify` |
 | `cloud-solution-architect` | arquitetura cloud | `plan`, `code-reviewer` |
 | `engineering-best-practices` | boas práticas | `code-reviewer` |
@@ -67,6 +78,12 @@ npm link
 | `local-spring-run` | execução local Spring | `implement` |
 | `proxy-configuration` | proxy corporativo | (setup) |
 
+### Automação
+
+- **`CONTEXT.md` injetado automaticamente**: se existir um `CONTEXT.md` no `projectRoot` ou em `.agents/artifacts`, seu conteúdo vira `{{context}}` em toda renderização de skill. O passo `context` da esteira produz/atualiza esse artefato, e as skills `clarify`, `implement`, `test`, `code-reviewer` usam a linguagem do domínio.
+- **Passos paralelos** (`type: parallel`): um passo pode fan-out de `parallel_steps`, cada um com sua própria skill, input e artefato. Usado na fase de review para rodar os dois eixos (standards/smells e fidelidade à spec) como sub-agentes concorrentes e consolidar o veredito.
+- **Frontmatter YAML removido**: o `SkillLoader` extrai o bloco `---...---` do topo de cada `SKILL.md` antes de renderizar, para que o LLM receba apenas as instruções.
+
 ## Pipeline completo
 
 ```
@@ -82,6 +99,8 @@ User Story (texto)
        ↓
 [clarify]                 →  clarification.md, atualiza run-log
        ↓
+[context]                 →  CONTEXT.md (linguagem ubíqua), injeta {{context}}
+       ↓
 [plan]                    →  plan.md, atualiza run-log
        ↓
 [tasks]                   →  tasks.md, atualiza run-log
@@ -90,9 +109,9 @@ User Story (texto)
        ↓
 [test]                    →  teste.md, atualiza run-log
        ↓
-[code-reviewer]           →  review.md, atualiza run-log
-       ↓
-[ human_pause ]           ←  revisão humana
+[code-reviewer] ══╗       →  review-standards.md + review-spec.md (2 eixos em paralelo)
+       ↓          ║
+[ human_pause ]   ←       revisão humana
        ↓
 [closer]                  →  closure.md, atualiza run-log
        ↓

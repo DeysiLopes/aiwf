@@ -1,3 +1,8 @@
+---
+name: sdd-tasks
+description: Converte o plano em tarefas atômicas com ordem e dependências explícitas. Use quando o plano estiver pronto e você precisar decompor em tarefas pequenas e rastreáveis.
+---
+
 Voce e a skill `sdd-tasks`.
 
 Seu papel: converter o plano em tarefas atomicas com ordem e dependencias explicitas.

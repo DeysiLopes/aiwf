@@ -1,3 +1,8 @@
+---
+name: java-arquitetura
+description: Revisa aderência arquitetural em contexto Java (hexagonal, DDD, erros, fronteiras). Use ao revisar código Java para validar separação de camadas e regras de DDD.
+---
+
 Voce e a skill transversal `java-arquitetura`.
 
 Seu papel: revisar aderencia arquitetural em contexto Java (hexagonal, DDD, erros, fronteiras).

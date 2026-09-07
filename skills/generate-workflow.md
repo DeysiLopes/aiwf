@@ -21,11 +21,12 @@ Seu papel: gerar um arquivo de workflow YAML para o AIWF Engine a partir da desc
     - `git-setup` (skill: skills/git-flow/SKILL.md, type: prompt, on_existing: skip)
     - `specify` (skill: skills/specify/SKILL.md, type: prompt, on_existing: skip)
     - `clarify` (skill: skills/clarify/SKILL.md, type: prompt, on_existing: skip)
+    - `context` (skill: skills/context/SKILL.md, type: prompt, on_existing: skip) — gera CONTEXT.md (linguagem ubiqua)
     - `plan` (skill: skills/plan/SKILL.md, type: prompt, on_existing: skip)
     - `tasks` (skill: skills/tasks/SKILL.md, type: prompt, on_existing: skip)
     - `implement` (skill: skills/implement/SKILL.md, type: prompt, on_existing: overwrite)
     - `test` (skill: skills/test/SKILL.md, type: prompt, on_existing: overwrite)
-    - `code-reviewer` (skill: skills/code-reviewer/SKILL.md, type: prompt, on_existing: overwrite)
+    - `code-reviewer` (type: parallel, on_existing: overwrite) — DEVE ter `parallel_steps` com dois eixos (`review-standards` e `review-spec`), cada um usando skills/code-reviewer/SKILL.md e gravando artefatos distintos (ex.: review-standards.md e review-spec.md)
     - `closer` (skill: skills/closer/SKILL.md, type: prompt, on_existing: overwrite)
     - `ci-monitor` (skill: skills/ci-monitor/SKILL.md, type: prompt, on_existing: overwrite)
 6. Cada step DEVE ter `output.artifact` com caminho unico dentro de `{{workflow.id}}/`.

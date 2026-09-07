@@ -20,4 +20,25 @@ describe("TemplateEngine", () => {
         expect(result).toContain("Spec: Spec body");
         expect(result).toContain("Input: User story body");
     });
+    it("replaces the context placeholder", () => {
+        const engine = new TemplateEngine();
+        const result = engine.render("Vocab: {{context}}", {
+            workflow: { id: "S", name: "S", description: "D" },
+            tdd: false,
+            artifacts: {},
+            input: {},
+            context: "materialization cascade"
+        });
+        expect(result).toContain("Vocab: materialization cascade");
+    });
+    it("leaves context empty when not provided", () => {
+        const engine = new TemplateEngine();
+        const result = engine.render("Vocab: {{context}}", {
+            workflow: { id: "S", name: "S", description: "D" },
+            tdd: false,
+            artifacts: {},
+            input: {}
+        });
+        expect(result).toContain("Vocab: ");
+    });
 });

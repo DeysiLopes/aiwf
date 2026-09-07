@@ -7,6 +7,7 @@ export interface RenderContext {
   tdd: boolean;
   artifacts: Record<string, string>;
   input: Record<string, string>;
+  context?: string;
 }
 
 export class TemplateEngine {
@@ -27,6 +28,9 @@ export class TemplateEngine {
       }
       if (key === "tdd") {
         return context.tdd ? "true" : "false";
+      }
+      if (key === "context") {
+        return context.context ?? "";
       }
       return "";
     };

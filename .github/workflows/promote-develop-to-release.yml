@@ -1,4 +1,4 @@
-name: promote develop → pre-release
+name: promote develop → release
 
 on:
   push:
@@ -6,50 +6,109 @@ on:
       - develop
 
 concurrency:
-  group: promote-develop-to-prerelease
+  group: promote-develop-to-release
   cancel-in-progress: true
 
 jobs:
   promote:
     runs-on: ubuntu-latest
     permissions:
-      contents: read
+      contents: write
       pull-requests: write
     steps:
       - uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+          fetch-tags: true
 
-      - name: Create or update PR develop → pre-release
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 20
+
+      - name: Derive next version from conventional commits
+        id: version
+        run: |
+          LATEST=$(git tag --list 'v*' --sort=-v:refname | head -1)
+          if [ -z "$LATEST" ]; then
+            echo "tag=v0.1.0" >> "$GITHUB_OUTPUT"
+            exit 0
+          fi
+
+          MAJOR=$(echo "$LATEST" | sed 's/v//' | cut -d. -f1)
+          MINOR=$(echo "$LATEST" | sed 's/v//' | cut -d. -f2)
+          PATCH=$(echo "$LATEST" | sed 's/v//' | cut -d. -f3)
+
+          INCREMENT="patch"
+          while IFS= read -r msg; do
+            case "$msg" in
+              *"BREAKING CHANGE"*|*"!:"* )
+                INCREMENT="major"
+                break
+                ;;
+              feat:*|feat\(*:* )
+                [ "$INCREMENT" != "major" ] && INCREMENT="minor"
+                ;;
+              fix:*|fix\(*:* )
+                ;;
+            esac
+          done < <(git log "$LATEST..HEAD" --format="%s" 2>/dev/null || echo "")
+
+          case "$INCREMENT" in
+            major) MAJOR=$((MAJOR + 1)); MINOR=0; PATCH=0 ;;
+            minor) MINOR=$((MINOR + 1)); PATCH=0 ;;
+            patch) PATCH=$((PATCH + 1)) ;;
+          esac
+
+          echo "tag=v$MAJOR.$MINOR.$PATCH" >> "$GITHUB_OUTPUT"
+
+      - name: Create release branch from main, merge develop, tag, and PR to main
         env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
           GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
         run: |
-          BASE="pre-release"
-          HEAD="develop"
+          TAG="${{ steps.version.outputs.tag }}"
+          RELEASE_BRANCH="release/$TAG"
 
-          if ! gh api repos/${{ github.repository }}/branches/$BASE --jq '.name' &>/dev/null; then
-            echo "Branch '$BASE' does not exist. Skipping PR creation."
+          git config user.email "github-actions[bot]@users.noreply.github.com"
+          git config user.name "github-actions[bot]"
+
+          # Verify main exists
+          if ! gh api repos/${{ github.repository }}/branches/main --jq '.name' &>/dev/null; then
+            echo "Branch 'main' does not exist. Skipping."
             exit 0
           fi
 
-          COMMITS_AHEAD=$(gh api repos/${{ github.repository }}/compare/$BASE...$HEAD --jq '.ahead_by' 2>/dev/null || echo "0")
+          # Check if develop has new commits vs main
+          COMMITS_AHEAD=$(gh api repos/${{ github.repository }}/compare/main...develop --jq '.ahead_by' 2>/dev/null || echo "0")
           if [ "$COMMITS_AHEAD" -eq 0 ]; then
-            echo "No commits ahead of $BASE. Skipping PR."
+            echo "No commits ahead of main. Skipping release."
             exit 0
           fi
 
-          PR_NUMBER=$(gh pr list \
-            --head "$HEAD" \
-            --base "$BASE" \
-            --state open \
-            --json number \
-            --jq '.[0].number // empty')
+          echo "=== Creating release branch $RELEASE_BRANCH from main ==="
+          git fetch origin main
+          git checkout -b "$RELEASE_BRANCH" origin/main
 
-          if [ -n "$PR_NUMBER" ]; then
-            echo "PR #$PR_NUMBER already exists — skipping"
+          echo "=== Merging develop into $RELEASE_BRANCH ==="
+          git fetch origin develop
+          if git merge origin/develop -m "chore: merge develop into $RELEASE_BRANCH"; then
+            echo "Merge succeeded (no conflicts)"
           else
-            echo "Creating PR from $HEAD → $BASE"
-            gh pr create \
-              --base "$BASE" \
-              --head "$HEAD" \
-              --title "chore: promote develop → pre-release" \
-              --body "Auto-promotion PR\n\n\`$HEAD\` → \`$BASE\`"
+            echo "Merge conflict detected — resolving by accepting develop's changes"
+            git merge --abort
+            # Fallback: overwrite with develop content to avoid manual resolution
+            git checkout origin/develop -- .
+            git commit -m "chore: resolve conflicts by adopting develop state for $RELEASE_BRANCH"
           fi
+
+          echo "=== Tagging $TAG ==="
+          npm version "$TAG" --no-git-tag-version --allow-same-version
+          git add package.json
+          git commit -m "chore: bump version to $TAG"
+          git tag "$TAG"
+
+          echo "=== Pushing branch and tag ==="
+          git push origin "$RELEASE_BRANCH"
+          git push origin "$TAG"
+
+          echo "=== Skipping PR to main (create-pr-release-to-main.yml handles it on push) ==="

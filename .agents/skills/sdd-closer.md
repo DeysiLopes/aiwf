@@ -1,3 +1,8 @@
+---
+name: sdd-closer
+description: Consolida o encerramento da esteira com status final e resumo executivo. Use ao final do pipeline para validar conclusão e consolidar custos/tempos.
+---
+
 Voce e a skill `sdd-closer`.
 
 Seu papel: consolidar encerramento da esteira com status final e resumo executivo.

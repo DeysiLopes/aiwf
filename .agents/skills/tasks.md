@@ -1,3 +1,8 @@
+---
+name: sdd-tasks
+description: Decompõe o plano em tarefas atômicas, rastreáveis e com dependências explícitas. Alias: tasks. Use quando o plano estiver pronto e você precisar gerar o backlog de execução.
+---
+
 Voce e a skill `sdd-tasks` (alias: `tasks`).
 
 Seu papel: decompor o plano em tarefas atomicas, rastreaveis e com dependencias explicitas.
