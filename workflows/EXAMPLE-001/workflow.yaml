@@ -7,6 +7,7 @@ tdd: false
 artifacts_dir: ".agents/artifacts"
 steps:
   - id: workflow-kickoff
+    name: "Kickoff"
     skill: "skills/workflow-kickoff/SKILL.md"
     type: prompt
     on_existing: skip
@@ -21,6 +22,7 @@ steps:
       context: "Contexto do projeto e motivacao"
 
   - id: verify-install
+    name: "Verificar ambiente"
     skill: "skills/verify-install/SKILL.md"
     type: prompt
     on_existing: skip
@@ -30,6 +32,7 @@ steps:
       context: "Ambiente do projeto — verificar dependencias e ferramentas"
 
   - id: git-setup
+    name: "Setup do repositorio"
     skill: "skills/git-flow/SKILL.md"
     type: prompt
     on_existing: skip
@@ -41,6 +44,7 @@ steps:
       base_branch: "develop"
 
   - id: specify
+    name: "Especificacao tecnica"
     skill: "skills/specify/SKILL.md"
     type: prompt
     on_existing: skip
@@ -51,6 +55,7 @@ steps:
       constraints: "Restricoes tecnicas e de negocio"
 
   - id: clarify
+    name: "Clarificacao"
     skill: "skills/clarify/SKILL.md"
     type: prompt
     on_existing: skip
@@ -59,8 +64,22 @@ steps:
     input:
       user_story: "{{workflow.description}}"
       specification: "{{artifacts.specification}}"
+      context: "{{context}}"
+
+  - id: context
+    name: "Modelo de dominio (linguagem ubiqua)"
+    skill: "skills/context/SKILL.md"
+    type: prompt
+    on_existing: skip
+    output:
+      artifact: CONTEXT.md
+    input:
+      user_story: "{{workflow.description}}"
+      specification: "{{artifacts.specification}}"
+      clarification: "{{artifacts.clarification}}"
 
   - id: plan
+    name: "Plano de implementacao"
     skill: "skills/plan/SKILL.md"
     type: prompt
     on_existing: skip
@@ -71,6 +90,7 @@ steps:
       clarification: "{{artifacts.clarification}}"
 
   - id: tasks
+    name: "Tarefas atomicas"
     skill: "skills/tasks/SKILL.md"
     type: prompt
     on_existing: skip
@@ -80,6 +100,7 @@ steps:
       plan: "{{artifacts.plan}}"
 
   - id: implement
+    name: "Implementacao"
     skill: "skills/implement/SKILL.md"
     type: prompt
     on_existing: overwrite
@@ -91,6 +112,7 @@ steps:
       output_file: "src/example.js"
 
   - id: test
+    name: "Testes"
     skill: "skills/test/SKILL.md"
     type: prompt
     on_existing: overwrite
@@ -103,24 +125,46 @@ steps:
       coverage_target: "80%"
 
   - id: code-reviewer
-    skill: "skills/code-reviewer/SKILL.md"
-    type: prompt
+    name: "Code review em dois eixos"
+    type: parallel
     on_existing: overwrite
-    output:
-      artifact: review.md
-    input:
-      review_focus: "seguranca, performance, boas praticas"
+    parallel_steps:
+      - id: review-standards
+        name: "Review: standards e boas praticas"
+        skill: "skills/code-reviewer/SKILL.md"
+        on_existing: overwrite
+        output:
+          artifact: review-standards.md
+        input:
+          review_focus: "eixo-1"
+          specification: "{{artifacts.specification}}"
+          implementation: "{{artifacts.implementacao}}"
+          context: "{{context}}"
+      - id: review-spec
+        name: "Review: fidelidade a spec"
+        skill: "skills/code-reviewer/SKILL.md"
+        on_existing: overwrite
+        output:
+          artifact: review-spec.md
+        input:
+          review_focus: "eixo-2"
+          specification: "{{artifacts.specification}}"
+          implementation: "{{artifacts.implementacao}}"
+          context: "{{context}}"
 
   - id: closer
+    name: "Relatorio final"
     skill: "skills/closer/SKILL.md"
     type: prompt
     on_existing: overwrite
     output:
       artifact: relatorio-final.md
     input:
-      review: "{{artifacts.review}}"
+      review: "{{artifacts.review-standards}}"
+      review_spec: "{{artifacts.review-spec}}"
 
   - id: ci-monitor
+    name: "Monitor de CI"
     skill: "skills/ci-monitor/SKILL.md"
     type: prompt
     on_existing: overwrite

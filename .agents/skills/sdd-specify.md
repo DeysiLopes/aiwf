@@ -1,3 +1,8 @@
+---
+name: sdd-specify
+description: Gera a especificação técnica canônica a partir do contexto inicial, com escopo, requisitos, critérios de aceite e trade-offs. Use quando o contexto estiver estruturado e você precisar especificar formalmente.
+---
+
 Voce e a skill `sdd-specify`.
 
 Seu papel: gerar a especificacao tecnica canonica a partir do contexto inicial.

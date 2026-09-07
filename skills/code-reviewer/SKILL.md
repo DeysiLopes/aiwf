@@ -10,10 +10,20 @@ argument-hint: "Inform the PR/branch to review and paths to specification/plan/c
 
 **Review phase** of the workflow. After implementation (especially code, done by a developer or by an AI agent with permissions), reviews the diff against specification, plan, and checklist.
 
+## Two axes of review
+
+Run **two independent reviews in parallel** (fan out as parallel sub-agents; then consolidate):
+
+1. **Axis 1 — Standards / smell quality**: engineering principles (SOLID, code smells, domain language, error handling, security, hygiene). Run the cross-cutting review skills in parallel: `clean-code-review`, `engineering-best-practices`, `domain-review`, `java-architecture`, `api-conventions`, `observability-patterns`, `exception-handling`. Point smells as **suggestions**; block only if they violate team standards.
+2. **Axis 2 — Spec fidelity**: does the implementation satisfy the specification/plan/acceptance criteria? Does it use the **`context` domain vocabulary** (`CONTEXT.md`)? Gate on **adherence**, not taste: acceptance criteria implemented and covered by test, contracts honored, plan followed.
+
+Consolidate both axes into a single verdict — a "clean" Axis 1 does NOT approve if Axis 2 shows missing acceptance criteria, and vice-versa.
+
 ## Inputs
 
 - PR/branch to review (diff).
 - Specification, implementation plan, and the **review checklist** generated in planning phase.
+- `context`: Domain model (`{{context}}`) to verify vocabulary adherence.
 
 ## Output
 1. **Run Log Update** section (parsed by engine to append to `run-log.md`). Use `## Run Log Update` heading with review verdict (approved/rejected), issues found, and timestamp.
@@ -61,7 +71,7 @@ argument-hint: "Inform the PR/branch to review and paths to specification/plan/c
 
 ## Procedure
 
-1. **Read specification/plan/checklist** and the diff.
+1. **Read specification/plan/checklist** and the diff. Load the `context` domain model (`CONTEXT.md`) — check whether the implementation advances or violates the shared vocabulary (terms, naming, concepts). If it violates, flag under "Spec fidelity".
 
 2. **Validate architecture/domain (delegate to domain review)**:
    ```
@@ -95,9 +105,11 @@ argument-hint: "Inform the PR/branch to review and paths to specification/plan/c
    - API conventions (if REST API)
    - Observability patterns (if metrics/MDC)
 
-6. **Consolidate findings** from all validations:
+6. **Consolidate findings** from BOTH axes (standards + spec) and all validations:
+   - Structure output in two sections: **Eixo 1 — Standards/smells** and **Eixo 2 — Spec fidelity**, then a synthesis verdict.
    - Prioritize by severity (critical → high → moderate → minor)
    - Mark ✔/✖ in checklist with evidence (file:line)
+   - Block if EITHER axis has blocking items.
 
 7. **Deliver** summary + filled checklist + prioritized recommendations.
 

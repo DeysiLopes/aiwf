@@ -1,11 +1,13 @@
 import { readFile } from "node:fs/promises";
 import { load } from "js-yaml";
-import type { WorkflowDefinition, WorkflowStep } from "../types/workflow.types.js";
+import type { ParallelSubStep, WorkflowDefinition, WorkflowStep } from "../types/workflow.types.js";
 
 type RawInput = Record<string, string> | Array<Record<string, string>>;
-type RawWorkflow = Omit<WorkflowDefinition, "steps"> & {
-  steps: Array<Omit<WorkflowStep, "input"> & { input?: RawInput }>;
+type RawStep = Omit<WorkflowStep, "input"> & {
+  input?: RawInput;
+  parallel_steps?: Array<Omit<ParallelSubStep, "input"> & { input?: RawInput }>;
 };
+type RawWorkflow = Omit<WorkflowDefinition, "steps"> & { steps: RawStep[] };
 
 export class WorkflowReader {
   async load(path: string): Promise<WorkflowDefinition> {
@@ -37,7 +39,7 @@ export class WorkflowReader {
     };
   }
 
-  private normalizeStep(step: RawWorkflow["steps"][number], index: number): WorkflowStep {
+  private normalizeStep(step: RawStep, index: number): WorkflowStep {
     if (!step.id) {
       throw new Error(`workflow.steps[${index}].id is required`);
     }
@@ -45,6 +47,22 @@ export class WorkflowReader {
       throw new Error(`workflow.steps[${index}].name is required`);
     }
     const stepType = (step as any).type ?? "skill";
+
+    if (stepType === "parallel") {
+      if (!Array.isArray(step.parallel_steps) || step.parallel_steps.length === 0) {
+        throw new Error(`workflow.steps[${index}] (parallel) must have parallel_steps`);
+      }
+      return {
+        id: step.id,
+        name: step.name,
+        input: this.normalizeInput(step.input),
+        on_existing: step.on_existing ?? "skip",
+        type: "parallel",
+        parallel_steps: step.parallel_steps.map((sub, subIndex) =>
+          this.normalizeParallelStep(sub, index, subIndex)
+        )
+      };
+    }
 
     if (stepType !== "human_pause") {
       if (!step.skill) {
@@ -63,6 +81,30 @@ export class WorkflowReader {
       input: this.normalizeInput(step.input),
       on_existing: step.on_existing ?? "skip",
       type: stepType as any
+    };
+  }
+
+  private normalizeParallelStep(step: NonNullable<RawStep["parallel_steps"]>[number], stepIndex: number, index: number): ParallelSubStep {
+    if (!step?.id) {
+      throw new Error(`workflow.steps[${stepIndex}].parallel_steps[${index}].id is required`);
+    }
+    if (!step.name) {
+      throw new Error(`workflow.steps[${stepIndex}].parallel_steps[${index}].name is required`);
+    }
+    if (!step.skill) {
+      throw new Error(`workflow.steps[${stepIndex}].parallel_steps[${index}].skill is required`);
+    }
+    if (!step.output?.artifact) {
+      throw new Error(`workflow.steps[${stepIndex}].parallel_steps[${index}].output.artifact is required`);
+    }
+
+    return {
+      id: step.id,
+      name: step.name,
+      skill: step.skill,
+      input: this.normalizeInput(step.input),
+      output: step.output,
+      on_existing: step.on_existing ?? "overwrite"
     };
   }
 
