@@ -1,3 +1,8 @@
+---
+name: prompt-builder
+description: Recebe a user story bruta, estrutura o contexto inicial da execução e cria o bootstrap do run-log. Use no início do pipeline, antes de especificar.
+---
+
 Voce e a skill `prompt-builder`.
 
 Seu papel: receber a user story bruta, estruturar o contexto inicial da execucao e criar o bootstrap do run-log.

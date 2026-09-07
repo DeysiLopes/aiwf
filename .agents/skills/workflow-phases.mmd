@@ -1,0 +1,38 @@
+flowchart TD
+    H[Story/Requirement] --> KICKOFF[workflow-kickoff<br/>Phase 0: Initialize]
+    KICKOFF --> VERIFY[verify-install<br/>Phase 0.5: Validate Setup]
+    VERIFY --> GIT_SETUP[git-flow<br/>Phase 1: Repository Setup]
+    GIT_SETUP --> SPECIFY[specify<br/>Phase 2: Specification]
+    SPECIFY --> CLARIFY[clarify<br/>Phase 3: Clarification]
+    CLARIFY --> PLAN[plan<br/>Phase 4: Planning]
+    PLAN --> REVIEW_PLAN{domain-review<br/>Optional: Validate Plan}
+    REVIEW_PLAN -->|Yes| DOMAIN_PLAN[domain-review<br/>--target plan.md]
+    REVIEW_PLAN -->|No| TASKS
+    DOMAIN_PLAN --> TASKS[tasks<br/>Phase 5: Task Decomposition]
+    TASKS --> IMPLEMENT[implement<br/>Phase 6: Code]
+    IMPLEMENT --> REVIEW_IMPL{domain-review<br/>Optional: Pre-commit}
+    REVIEW_IMPL -->|Yes| DOMAIN_IMPL[domain-review<br/>--mode incremental]
+    REVIEW_IMPL -->|No| TEST
+    DOMAIN_IMPL --> TEST[test<br/>Phase 7: Testing]
+    TEST --> CODE_REVIEW[code-reviewer<br/>Phase 8: Review]
+    CODE_REVIEW --> CLOSER[closer<br/>Phase 9: Finalize]
+    CLOSER --> GIT_PUSH[git-flow<br/>Push & PR]
+    GIT_PUSH --> CI[ci-monitor<br/>Phase 10: Monitor CI]
+
+    style KICKOFF fill:#0288d1,stroke:#01579b,color:#fff
+    style VERIFY fill:#0288d1,stroke:#01579b,color:#fff
+    style GIT_SETUP fill:#0288d1,stroke:#01579b,color:#fff
+    style SPECIFY fill:#4caf50,stroke:#1b5e20,color:#fff
+    style CLARIFY fill:#4caf50,stroke:#1b5e20,color:#fff
+    style PLAN fill:#4caf50,stroke:#1b5e20,color:#fff
+    style REVIEW_PLAN fill:#673ab7,stroke:#311b92,color:#fff
+    style DOMAIN_PLAN fill:#9c27b0,stroke:#4a148c,color:#fff
+    style TASKS fill:#4caf50,stroke:#1b5e20,color:#fff
+    style IMPLEMENT fill:#ff9800,stroke:#e65100,color:#000
+    style REVIEW_IMPL fill:#673ab7,stroke:#311b92,color:#fff
+    style DOMAIN_IMPL fill:#9c27b0,stroke:#4a148c,color:#fff
+    style TEST fill:#ff9800,stroke:#e65100,color:#000
+    style CODE_REVIEW fill:#f44336,stroke:#b71c1c,color:#fff
+    style CLOSER fill:#795548,stroke:#3e2723,color:#fff
+    style GIT_PUSH fill:#795548,stroke:#3e2723,color:#fff
+    style CI fill:#607d8b,stroke:#37474f,color:#fff

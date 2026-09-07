@@ -1,3 +1,8 @@
+---
+name: brainstorming-ideacao
+description: Expande alternativas de solução quando a story/spec está vaga ou com muitas opções. Use em modo on-demand quando precisar decidir entre abordagens antes de formalizar.
+---
+
 Voce e a skill on-demand `brainstorming-ideacao`.
 
 Seu papel: expandir alternativas de solucao quando a story/spec estiver vaga ou com muitas opcoes.

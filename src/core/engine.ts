@@ -2,7 +2,7 @@ import { basename, extname, resolve, dirname } from "node:path";
 import { fileURLToPath } from "node:url";
 import { existsSync } from "node:fs";
 import { StateManager } from "./state-manager.js";
-import type { WorkflowDefinition } from "../types/workflow.types.js";
+import type { ParallelSubStep, WorkflowDefinition, WorkflowStep } from "../types/workflow.types.js";
 import { ArtifactManager } from "./artifact-manager.js";
 import type { LlmCaller } from "./llm-caller.js";
 import { SkillLoader } from "./skill-loader.js";
@@ -39,11 +39,14 @@ export class WorkflowEngine {
     // If resuming, try to load existing artifacts into context for earlier steps
     for (let i = 0; i < startIndex; i++) {
       const step = options.workflow.steps[i];
-      if (step.output?.artifact) {
-        const artifactPath = resolve(artifactsRoot, step.output.artifact);
+      const targets = step.type === "parallel" && step.parallel_steps
+        ? step.parallel_steps.map(sub => ({ id: sub.id, artifact: sub.output.artifact }))
+        : (step.output?.artifact ? [{ id: step.id, artifact: step.output.artifact }] : []);
+      for (const { id, artifact } of targets) {
+        const artifactPath = resolve(artifactsRoot, artifact);
         if (await this.artifactManager.exists(artifactPath)) {
           const content = await this.artifactManager.read(artifactPath);
-          this.addArtifactToContext(artifactsContext, step.id, step.output.artifact, content);
+          this.addArtifactToContext(artifactsContext, id, artifact, content);
         }
       }
     }
@@ -56,6 +59,13 @@ export class WorkflowEngine {
         await stateManager.saveState({ workflowId: options.workflow.id, nextStepIndex: idx + 1 });
         options.onLog?.(`paused at ${step.id} (human_pause). Resume with: aiwf resume ${options.workflow.id}`);
         return;
+      }
+
+      if (step.type === "parallel") {
+        const contextDoc = await this.loadContextDoc(options.projectRoot, artifactsRoot);
+        await this.runParallelStep(options, stateManager, artifactsRoot, artifactsContext, step, contextDoc);
+        await stateManager.saveState({ workflowId: options.workflow.id, nextStepIndex: idx + 1 });
+        continue;
       }
 
       if (!step.output?.artifact) {
@@ -82,6 +92,7 @@ export class WorkflowEngine {
       }
       const skillTemplate = await this.skillLoader.load(skillPath);
 
+      const contextDoc = await this.loadContextDoc(options.projectRoot, artifactsRoot);
       const renderedPrompt = this.templateEngine.render(skillTemplate, {
         workflow: {
           id: options.workflow.id,
@@ -90,7 +101,8 @@ export class WorkflowEngine {
         },
         tdd: options.workflow.tdd ?? false,
         artifacts: artifactsContext,
-        input: step.input
+        input: step.input,
+        context: contextDoc
       });
 
       if (options.manual) {
@@ -127,9 +139,110 @@ export class WorkflowEngine {
     await stateManager.clearState(options.workflow.id);
   }
 
+  private async runParallelStep(
+    options: EngineOptions,
+    stateManager: StateManager,
+    artifactsRoot: string,
+    artifactsContext: Record<string, string>,
+    step: WorkflowStep,
+    contextDoc: string
+  ): Promise<void> {
+    const subSteps = step.parallel_steps ?? [];
+    options.onLog?.(`running parallel step ${step.id} (${subSteps.length} sub-steps)`);
+
+    const base = {
+      workflow: {
+        id: options.workflow.id,
+        name: options.workflow.name,
+        description: options.workflow.description
+      },
+      tdd: options.workflow.tdd ?? false,
+      artifacts: artifactsContext
+    };
+
+    if (options.manual) {
+      // Render a prompt per missing sub-artifact, then stop for manual processing.
+      for (const sub of subSteps) {
+        const artifactPath = resolve(artifactsRoot, sub.output.artifact);
+        if (await this.artifactManager.exists(artifactPath)) {
+          const existing = await this.artifactManager.read(artifactPath);
+          this.addArtifactToContext(artifactsContext, sub.id, sub.output.artifact, existing);
+          options.onLog?.(`${sub.id} resolvido pelo agente (${sub.output.artifact} existe)`);
+          continue;
+        }
+        const skillPath = this.resolveSkillPath(options.projectRoot, sub.skill);
+        const skillTemplate = await this.skillLoader.load(skillPath);
+        const renderedPrompt = this.templateEngine.render(skillTemplate, {
+          ...base,
+          input: sub.input,
+          context: contextDoc
+        });
+        const promptPath = resolve(artifactsRoot, `${sub.output.artifact}.prompt.md`);
+        await this.artifactManager.save(promptPath, renderedPrompt);
+        options.onLog?.(`prompt renderizado para ${sub.id}`);
+        console.log(`\n📄 Prompt para "${step.id}/${sub.id}" salvo em: ${promptPath}`);
+        console.log(`   Processe o prompt e salve o resultado em: ${artifactPath}`);
+        console.log(`   Depois execute: aiwf resume ${options.workflow.id} --manual\n`);
+        await stateManager.saveState({ workflowId: options.workflow.id, nextStepIndex: options.workflow.steps.indexOf(step) });
+        return;
+      }
+      return;
+    }
+
+    await Promise.all(
+      subSteps.map(async (sub: ParallelSubStep) => {
+        const artifactPath = resolve(artifactsRoot, sub.output.artifact);
+        const shouldSkip =
+          sub.on_existing === "skip" && (await this.artifactManager.exists(artifactPath));
+        if (shouldSkip) {
+          const existing = await this.artifactManager.read(artifactPath);
+          this.addArtifactToContext(artifactsContext, sub.id, sub.output.artifact, existing);
+          options.onLog?.(`skipped ${sub.id} (${sub.output.artifact} already exists)`);
+          return;
+        }
+
+        options.onLog?.(`running parallel sub-step ${sub.id}`);
+        const skillPath = this.resolveSkillPath(options.projectRoot, sub.skill);
+        const skillTemplate = await this.skillLoader.load(skillPath);
+        const renderedPrompt = this.templateEngine.render(skillTemplate, {
+          ...base,
+          input: sub.input,
+          context: contextDoc
+        });
+
+        const output = options.dryRun
+          ? this.buildDryRunOutput(sub.id, renderedPrompt)
+          : await this.callModel(renderedPrompt, options.llmCaller);
+
+        await this.artifactManager.save(artifactPath, output);
+        await this.afterStep(artifactsRoot, sub.id, output);
+        this.addArtifactToContext(artifactsContext, sub.id, sub.output.artifact, output);
+        options.onLog?.(`saved ${sub.output.artifact}`);
+      })
+    );
+  }
+
+  private resolveSkillPath(projectRoot: string, skill: string): string {
+    const projectPath = resolve(projectRoot, skill);
+    return existsSync(projectPath) ? projectPath : resolve(PACKAGE_ROOT, skill);
+  }
+
+  private async loadContextDoc(projectRoot: string, artifactsRoot: string): Promise<string> {
+    const candidates = [
+      resolve(projectRoot, "CONTEXT.md"),
+      resolve(artifactsRoot, "CONTEXT.md")
+    ];
+    for (const candidate of candidates) {
+      if (await this.artifactManager.exists(candidate)) {
+        return this.artifactManager.read(candidate);
+      }
+    }
+    return "";
+  }
+
   private reorderForTdd(steps: WorkflowDefinition["steps"]): void {
-    const implIdx = steps.findIndex(s => s.id === "sdd-implement");
-    const testIdx = steps.findIndex(s => s.id === "sdd-teste");
+    const implIdx = steps.findIndex(s => s.id === "implement");
+    const testIdx = steps.findIndex(s => s.id === "test");
     if (implIdx < 0 || testIdx < 0) return;
     if (testIdx < implIdx) return;
 
@@ -148,13 +261,13 @@ export class WorkflowEngine {
       renderedPrompt
     ];
 
-    if (stepId === "prompt-builder") {
+    if (stepId === "workflow-kickoff") {
       lines.push(
         "",
         "## Seed do run-log",
         "",
         "- workflow_id: dry-run",
-        "- etapa_atual: prompt-builder",
+        "- etapa_atual: workflow-kickoff",
         "- inicio_da_execucao: simulado",
         "- custo_estimado_tokens: 0",
         "- custo_estimado_usd: 0.00",
@@ -193,7 +306,7 @@ export class WorkflowEngine {
 
     const runLogPath = resolve(artifactsRoot, "run-log.md");
 
-    if (stepId === "prompt-builder") {
+    if (stepId === "workflow-kickoff") {
       await this.artifactManager.save(runLogPath, `# Run Log\n\n${section}\n`);
     } else {
       const existing = (await this.artifactManager.exists(runLogPath))
@@ -204,7 +317,7 @@ export class WorkflowEngine {
   }
 
   private extractRunLogSection(content: string, stepId: string): string | null {
-    const heading = stepId === "prompt-builder"
+    const heading = stepId === "workflow-kickoff"
       ? "## Seed do run-log"
       : "## Run Log Update";
 

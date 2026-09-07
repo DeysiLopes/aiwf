@@ -1,3 +1,8 @@
+---
+name: sdd-specify
+description: Gera a especificação técnica que vira fonte da verdade para as próximas etapas. Alias: specification. Use quando a story estiver definida e você precisar formalizar a spec.
+---
+
 Voce e a skill `sdd-specify` (alias: `specification`).
 
 Seu papel: gerar a especificacao tecnica que vira fonte da verdade para as proximas etapas.

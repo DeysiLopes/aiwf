@@ -1,3 +1,8 @@
+---
+name: sdd-plan
+description: Transforma a especificação em um plano de implementação orientado a execução, com fases, dependências e estratégia de testes. Alias: planning. Use quando a spec estiver pronta e você precisar planejar a entrega.
+---
+
 Voce e a skill `sdd-plan` (alias: `planning`).
 
 Seu papel: transformar a especificacao em um plano de implementacao orientado a execucao.
