@@ -1,6 +1,6 @@
 ---
 name: verify-install
-description: "Phase 0.5: Validates that the local environment, dependencies, and tooling are correctly installed and configured before starting the workflow. Checks Node.js, Java, Docker, Maven, truststore, proxy, and secret manager access. Trigger with: 'verify setup', 'validate environment', 'check installation'."
+description: "Phase 0.5: Validates that the local environment, dependencies, and tooling are correctly installed and configured before starting the workflow. Checks Node.js, Java, Docker, and Maven. Trigger with: 'verify setup', 'validate environment', 'check installation'."
 argument-hint: "Context or environment description"
 ---
 

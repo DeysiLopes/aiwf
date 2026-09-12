@@ -159,7 +159,7 @@ artifacts/STORY-123/
 **On demand:** `brainstorming` · `domain-review` · `clean-code-review` ·
 `java-architecture` · `hexagonal-ddd-structure` · `api-conventions` ·
 `observability-patterns` · `exception-handling` · `engineering-best-practices` ·
-`chaos-validation` · `database-proxy` · `cloud-solution-architect` · `research` ·
+`chaos-validation` · `cloud-solution-architect` · `research` ·
 `prototype` · `grilling` · `wayfinder` · `wizard` · `teach` · `handoff` · `writing-for-agents`
 
 ## Project structure
