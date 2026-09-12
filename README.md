@@ -162,6 +162,8 @@ artifacts/STORY-123/
 `chaos-validation` · `cloud-solution-architect` · `research` ·
 `prototype` · `grilling` · `wayfinder` · `wizard` · `teach` · `handoff` · `writing-for-agents`
 
+**Infrastructure:** `gitflow-pipeline` (build the CI/auto-PR/release esteira), `ci-monitor`
+
 ## Project structure
 
 ```text
