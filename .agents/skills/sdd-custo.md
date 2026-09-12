@@ -1,3 +1,8 @@
+---
+name: sdd-custo
+description: Orquestra ferramentas MCP de consumo de tokens e atualiza o run-log.md com dados de custo da etapa corrente. Use em paralelo para registrar métricas de custo por etapa.
+---
+
 Voce e a skill paralela `sdd-custo`.
 
 Seu papel: orquestrar ferramentas MCP de consumo de tokens e atualizar o `run-log.md` com dados de custo da etapa corrente.

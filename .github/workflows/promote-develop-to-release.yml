@@ -18,7 +18,6 @@ jobs:
     steps:
       - uses: actions/checkout@v4
         with:
-          ref: develop
           fetch-depth: 0
           fetch-tags: true
 
@@ -62,7 +61,7 @@ jobs:
 
           echo "tag=v$MAJOR.$MINOR.$PATCH" >> "$GITHUB_OUTPUT"
 
-      - name: Create release branch, tag, and PR to main
+      - name: Create release branch from main, merge develop, tag, and PR to main
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
           GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
@@ -73,14 +72,33 @@ jobs:
           git config user.email "github-actions[bot]@users.noreply.github.com"
           git config user.name "github-actions[bot]"
 
-          echo "=== Creating/updating release branch: $RELEASE_BRANCH ==="
-          if gh api repos/${{ github.repository }}/branches/$RELEASE_BRANCH --jq '.name' &>/dev/null; then
-            echo "Branch $RELEASE_BRANCH exists — force-updating from develop"
-            git push origin +develop:$RELEASE_BRANCH
+          # Verify main exists
+          if ! gh api repos/${{ github.repository }}/branches/main --jq '.name' &>/dev/null; then
+            echo "Branch 'main' does not exist. Skipping."
+            exit 0
+          fi
+
+          # Check if develop has new commits vs main
+          COMMITS_AHEAD=$(gh api repos/${{ github.repository }}/compare/main...develop --jq '.ahead_by' 2>/dev/null || echo "0")
+          if [ "$COMMITS_AHEAD" -eq 0 ]; then
+            echo "No commits ahead of main. Skipping release."
+            exit 0
+          fi
+
+          echo "=== Creating release branch $RELEASE_BRANCH from main ==="
+          git fetch origin main
+          git checkout -b "$RELEASE_BRANCH" origin/main
+
+          echo "=== Merging develop into $RELEASE_BRANCH ==="
+          git fetch origin develop
+          if git merge origin/develop -m "chore: merge develop into $RELEASE_BRANCH"; then
+            echo "Merge succeeded (no conflicts)"
           else
-            echo "Creating branch $RELEASE_BRANCH from develop"
-            git checkout -b "$RELEASE_BRANCH"
-            git push origin "$RELEASE_BRANCH"
+            echo "Merge conflict detected — resolving by accepting develop's changes"
+            git merge --abort
+            # Fallback: overwrite with develop content to avoid manual resolution
+            git checkout origin/develop -- .
+            git commit -m "chore: resolve conflicts by adopting develop state for $RELEASE_BRANCH"
           fi
 
           echo "=== Tagging $TAG ==="
@@ -88,29 +106,9 @@ jobs:
           git add package.json
           git commit -m "chore: bump version to $TAG"
           git tag "$TAG"
+
+          echo "=== Pushing branch and tag ==="
+          git push origin "$RELEASE_BRANCH"
           git push origin "$TAG"
 
-          echo "=== Creating/updating PR $RELEASE_BRANCH → main ==="
-          COMMITS_AHEAD=$(gh api repos/${{ github.repository }}/compare/main...$RELEASE_BRANCH --jq '.ahead_by' 2>/dev/null || echo "0")
-          if [ "$COMMITS_AHEAD" -eq 0 ]; then
-            echo "No commits ahead of main. Skipping PR."
-            exit 0
-          fi
-
-          PR_NUMBER=$(gh pr list \
-            --head "$RELEASE_BRANCH" \
-            --base main \
-            --state open \
-            --json number \
-            --jq '.[0].number // empty')
-
-          if [ -n "$PR_NUMBER" ]; then
-            echo "PR #$PR_NUMBER already exists — recreating"
-            gh pr close "$PR_NUMBER" 2>/dev/null || true
-          fi
-
-          gh pr create \
-            --base main \
-            --head "$RELEASE_BRANCH" \
-            --title "chore: release $TAG → main" \
-            --body "Release PR\n\n\`$RELEASE_BRANCH\` → \`main\`"
+          echo "=== Skipping PR to main (create-pr-release-to-main.yml handles it on push) ==="

@@ -1,3 +1,8 @@
+---
+name: sdd-plan
+description: Gera o plano de implementação com fases, dependências e estratégia de validação. Use quando a spec estiver pronta e você precisar planejar a entrega.
+---
+
 Voce e a skill `sdd-plan`.
 
 Seu papel: gerar o plano de implementacao com fases, dependencias e estrategia de validacao.
