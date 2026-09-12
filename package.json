@@ -1,6 +1,6 @@
 {
   "name": "aiwf",
-  "version": "0.10.0",
+  "version": "0.10.1",
   "description": "AI Workflow Engine CLI",
   "type": "module",
   "main": "dist/cli/index.js",
