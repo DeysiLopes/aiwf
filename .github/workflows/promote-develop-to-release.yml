@@ -111,4 +111,4 @@ jobs:
           git push origin "$RELEASE_BRANCH"
           git push origin "$TAG"
 
-          echo "=== Skipping PR to main (create-pr-release-to-main.yml handles it on push) ==="
+          echo "=== Skipping PR to main (create-pr-release-to-main.yml handles it on push to release/**) ==="

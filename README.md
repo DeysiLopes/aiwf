@@ -1,175 +1,186 @@
-# AI Workflow Engine CLI (MVP)
+<div align="center">
 
-CLI em Node.js + TypeScript para executar workflows orientados por skills e gerar artefatos.
+# aiwf
 
-## Requisitos
+**AI Workflow Engine CLI** — skill-driven, agent-assisted software delivery.
 
-- Node.js 20+
-- npm
+Turn a user story into a complete, auditable trail of engineering artifacts —
+from kickoff to code review to CI — without losing human control.
 
+[![CI main](https://github.com/DeysiLopes/aiwf/actions/workflows/ci-main.yml/badge.svg)](https://github.com/DeysiLopes/aiwf/actions/workflows/ci-main.yml)
+[![CI develop](https://github.com/DeysiLopes/aiwf/actions/workflows/ci-develop.yml/badge.svg)](https://github.com/DeysiLopes/aiwf/actions/workflows/ci-develop.yml)
+![Node](https://img.shields.io/badge/node-20%2B-339933)
+![TypeScript](https://img.shields.io/badge/TypeScript-3178c6)
+![License](https://img.shields.io/badge/license-ISC-blue)
 
-## Instalação
+</div>
+
+---
+
+## Highlights
+
+- **Full delivery pipeline out of the box** — 13 skills chained into one flow: kickoff → setup → specification → clarification → planning → tasks → implementation → tests → code review → closure → CI monitoring.
+- **Human in the loop** — a `human_pause` step forces a human checkpoint before finalization; the AI never "closes the story" alone.
+- **Resume anywhere** — state is persisted after every step, so you can pause and pick up where you left off.
+- **Parallel reviews** — the code-reviewer phase runs two independent axes (technical standards + spec fidelity) as concurrent sub-agents.
+- **Test without spending tokens** — `--dry-run` renders every prompt without calling a model.
+- **Provider-agnostic** — plug in Opencode Zen (default) or OpenAI.
+- **TDD-aware** — reorders `test` before `implement` when the workflow declares it.
+- **Auto run-log** — every step appends to a consolidated run log for full traceability.
+- **Ubiquitous context** — a `CONTEXT.md` is injected into every prompt automatically.
+
+## How it works
+
+```mermaid
+flowchart LR
+    A[User Story] --> B[workflow-kickoff]
+    B --> C[specify → clarify → plan → tasks]
+    C --> D[implement]
+    D --> E[test]
+    E --> F[code-reviewer<br/>parallel axes]
+    F --> G[human_pause]
+    G --> H[closer → ci-monitor]
+    H --> I[run-log.md]
+```
+
+Each phase is a **skill** (a `SKILL.md` prompt template) declared in a `workflow.yaml`.
+The engine renders the skill with the accumulated artifacts, calls the LLM,
+stores the result, and moves on.
+
+## Quick start
 
 ```bash
 npm install
 npm run build
 npm link
+
+aiwf init                          # scaffold .agents/ (skills, workflows, artifacts)
+aiwf create STORY-123 --title "My story" --acceptance "when X then Y"
+aiwf run STORY-123                 # run the whole pipeline
+aiwf resume STORY-123              # continue after a human_pause
 ```
 
-## Estrutura do projeto
+> No idea what to write yet? Ship a sample workflow into your repo with
+> `aiwf init` and run `aiwf run EXAMPLE-001`.
 
-- `src/core`: motor do workflow
-- `src/cli`: comando `aiwf`
-- `skills/`: skills (agnósticas em inglês em `skills/<nome>/SKILL.md`)
-- `(finops movido para ideias/finops — backlog)`
-- `workflows/`: definições de workflow YAML de exemplo
-- `docs/`: diagramas e documentação complementar
+## Commands
 
-## Catalogo de skills
+| Command | Description |
+|---|---|
+| `aiwf init` | Copies built-in skills, a sample workflow, and creates `.agents/` in the target repo |
+| `aiwf create <id>` | Generates a `workflow.yaml` for a story using the LLM |
+| `aiwf run <id>` | Executes the workflow end to end (or to the first pause) |
+| `aiwf resume <id>` | Resumes from the last completed step |
+| `--dry-run` | Simulates execution without calling a model |
+| `--manual` | Renders prompts and waits for external artifacts (agent mode) |
+| `--model / --provider` | Selects the LLM model and provider |
 
-### Skills da esteira principal (ordem de execução)
+## AI provider setup
 
-| # | Skill (Agnóstica) | Artefato gerado | Equivalente legado |
-|---|---|---|---|---|
-| 1 | `workflow-kickoff` | `prompt-inicial.md`, seed run-log | `prompt-builder` |
-| 2 | `verify-install` | `verify-report.md` | — |
-| 3 | `git-flow` (setup) | `git-setup.md` | — |
-| 4 | `specify` | `specification.md` | `sdd-specify` |
-| 5 | `clarify` | `clarification.md` | `sdd-clarify` |
-| 6 | `context` | `CONTEXT.md` | `sdd-context` |
-| 7 | `plan` | `plan.md` | `sdd-plan` |
-| 8 | `tasks` | `tasks.md` | `sdd-tasks` |
-| 9 | `implement` | `implementation.md` | `sdd-implement` |
-| 10 | `test` | `teste.md` | `sdd-teste` |
-| 11 | `code-reviewer` | `review.md` | `code-reviewr` |
-| 12 | `closer` | `closure.md` | `sdd-closer` |
-| 13 | `ci-monitor` | `ci-report.md` | — |
-
-### Skills transversais / on-demand
-
-| Skill | Tipo | Chamada por |
-|---|---|---|
-| `grilling` | primitiva de entrevista (design tree/frontier) | `clarify` |
-| `wayfinder` | planejamento de esforço grande via tickets de decisão (mapa) | `workflow-kickoff` (esforços > 1 sessão) |
-| `diagnosing-bugs` | disciplina de diagnóstico/debug (feedback loop) | on-demand (bug/perf) |
-| `research` | sub-agente de pesquisa contra fontes primárias | `wayfinder` |
-| `prototype` | protótipo descartável (LOGIC.md/UI.md) | `wayfinder` |
-| `wizard` | wizard bash interativo para passos manuais | on-demand (provisionamento/setup) |
-| `teach` | captura de aprendizado por sessão | on-demand |
-| `handoff` | resumo de handover (`HANDOFF.md`) | on-demand (fim de jornada) |
-| `to-questionnaire` | transforma bullets em questionário | on-demand (refino de proposta) |
-| `writing-for-agents` | meta-skill p/ escrita orientada a agentes | todos os docs/skills |
-| `brainstorming` | ideação pré-especificação | `workflow-kickoff`, `specify` |
-| `cloud-solution-architect` | arquitetura cloud | `plan`, `code-reviewer` |
-| `engineering-best-practices` | boas práticas | `code-reviewer` |
-| `domain-review` | validação opcional | `plan`, `code-reviewer` |
-| `clean-code-review` | revisão qualidade | `code-reviewer` |
-| `java-architecture` | validação Java | `code-reviewer` |
-| `hexagonal-ddd-structure` | validação DDD | `domain-review` |
-| `exception-handling` | padrão erro | `code-reviewer` |
-| `api-conventions` | contrato API | `code-reviewer` |
-| `git-flow` | branch/commit/PR | transversal |
-| `observability-patterns` | observabilidade | `code-reviewer` |
-| `ai-cost-manager` | custo IA (via MCP) | esteira inteira |
-| `requirements-fetch` | fetch requisitos | `workflow-kickoff` |
-| `artifact-builder` | meta-skill para contribuir artefatos | (manual) |
-| `chaos-validation` | resiliência pós-deploy | pós-`ci-monitor` |
-| `database-proxy` | acesso DB seguro | `implement` |
-| `local-spring-run` | execução local Spring | `implement` |
-| `proxy-configuration` | proxy corporativo | (setup) |
-
-### Automação
-
-- **`CONTEXT.md` injetado automaticamente**: se existir um `CONTEXT.md` no `projectRoot` ou em `.agents/artifacts`, seu conteúdo vira `{{context}}` em toda renderização de skill. O passo `context` da esteira produz/atualiza esse artefato, e as skills `clarify`, `implement`, `test`, `code-reviewer` usam a linguagem do domínio.
-- **Passos paralelos** (`type: parallel`): um passo pode fan-out de `parallel_steps`, cada um com sua própria skill, input e artefato. Usado na fase de review para rodar os dois eixos (standards/smells e fidelidade à spec) como sub-agentes concorrentes e consolidar o veredito.
-- **Frontmatter YAML removido**: o `SkillLoader` extrai o bloco `---...---` do topo de cada `SKILL.md` antes de renderizar, para que o LLM receba apenas as instruções.
-
-## Pipeline completo
-
-```
-User Story (texto)
-       ↓
-[workflow-kickoff]        →  prompt-inicial.md, seed do run-log
-       ↓
-[verify-install]          →  verify-report.md, atualiza run-log
-       ↓
-[git-setup]               →  git-setup.md, atualiza run-log
-       ↓
-[specify]                 →  specification.md, atualiza run-log
-       ↓
-[clarify]                 →  clarification.md, atualiza run-log
-       ↓
-[context]                 →  CONTEXT.md (linguagem ubíqua), injeta {{context}}
-       ↓
-[plan]                    →  plan.md, atualiza run-log
-       ↓
-[tasks]                   →  tasks.md, atualiza run-log
-       ↓
-[implement]               →  implementation.md, atualiza run-log
-       ↓
-[test]                    →  teste.md, atualiza run-log
-       ↓
-[code-reviewer] ══╗       →  review-standards.md + review-spec.md (2 eixos em paralelo)
-       ↓          ║
-[ human_pause ]   ←       revisão humana
-       ↓
-[closer]                  →  closure.md, atualiza run-log
-       ↓
-[ci-monitor]              →  ci-report.md, atualiza run-log
-```
-
-O `run-log.md` é consolidado automaticamente pelo motor a cada etapa.
-
-## Configuração do provedor AI
-
-### Opencode Zen (padrão)
-
-Coloque sua chave no arquivo `~/.config/opencode/.env`:
+**Opencode Zen (default)** — key lives in `~/.config/opencode/.env`:
 
 ```env
 OPENCODE_API_KEY=sk-...
 ```
 
-O `aiwf` lê esse arquivo automaticamente ao iniciar. Modelo padrão: `big-pickle`.
-
 ```bash
-aiwf run STORY-001
-aiwf run STORY-001 --model gpt-5.3-codex
-aiwf run STORY-001 --provider zen --model big-pickle
-aiwf run STORY-001 --dry-run --workflow-dir examples
+aiwf run STORY-123                          # default model
+aiwf run STORY-123 --provider zen --model big-pickle
 ```
 
-### OpenAI (alternativo)
+**OpenAI**:
 
 ```bash
-export OPENAI_API_KEY=seu_token
-aiwf run STORY-001 --provider openai --model gpt-4o-mini
+export OPENAI_API_KEY=your_token
+aiwf run STORY-123 --provider openai --model gpt-4o-mini
 ```
 
-### Dry-run (sem chamar modelo)
+## Anatomy of a workflow
 
-```bash
-aiwf run STORY-001 --dry-run --workflow-dir examples
+```yaml
+id: STORY-001
+name: "Authentication module"
+artifacts_dir: ./artifacts/STORY-001
+tdd: false
+
+steps:
+  - id: workflow-kickoff
+    skill: skills/workflow-kickoff/SKILL.md
+    input:
+      story_title: "Authentication module"
+      story_description: "{{workflow.description}}"
+    output:
+      artifact: prompt-inicial.md
+    on_existing: skip
+
+  - id: implement
+    skill: skills/implement/SKILL.md
+    input:
+      tasks: "{{artifacts.tasks}}"
+    output:
+      artifact: implementation.md
+    on_existing: overwrite
+
+  - id: review
+    type: human_pause
+    prompt: "Review the artifacts, then run: aiwf resume STORY-001"
+
+  - id: closer
+    skill: skills/closer/SKILL.md
+    output:
+      artifact: closure.md
 ```
 
-Após pausa para revisão humana, retomar:
+Artifacts from earlier steps are available to later skills via `{{artifacts.<step-id>}}`
+(and `{{workflow.description}}` for the story text).
 
-```bash
-aiwf resume STORY-001 --workflow-dir examples
-```
-
-Arquivos gerados:
+## What you get
 
 ```text
-artifacts/STORY-001/
-├── prompt-inicial.md
-├── specification.md
-├── clarification.md
-├── plan.md
-├── tasks.md
-├── implementation.md
-├── teste.md
-├── review.md
-├── closure.md
-└── run-log.md
+artifacts/STORY-123/
+├── prompt-inicial.md      # kickoff prompt
+├── specification.md       # technical spec + acceptance criteria
+├── clarification.md       # assumptions & open questions
+├── plan.md                # implementation plan
+├── tasks.md               # atomic task breakdown
+├── implementation.md      # implementation guide
+├── teste.md               # test strategy
+├── review.md              # parallel code review verdict
+├── closure.md             # change plan
+└── run-log.md             # auditable trail of every step
 ```
+
+## Skill catalog
+
+**Core pipeline (in order):** `workflow-kickoff` · `verify-install` · `git-flow` ·
+`specify` · `clarify` · `context` · `plan` · `tasks` · `implement` · `test` ·
+`code-reviewer` · `closer` · `ci-monitor`
+
+**On demand:** `brainstorming` · `domain-review` · `clean-code-review` ·
+`java-architecture` · `hexagonal-ddd-structure` · `api-conventions` ·
+`observability-patterns` · `exception-handling` · `engineering-best-practices` ·
+`chaos-validation` · `database-proxy` · `cloud-solution-architect` · `research` ·
+`prototype` · `grilling` · `wayfinder` · `wizard` · `teach` · `handoff` · `writing-for-agents`
+
+## Project structure
+
+```text
+src/          core machinery (engine, state, artifacts, skills, templates, LLM)
+skills/       agnostic SKILL.md templates
+examples/     sample workflows (STORY-001, STORY-002, STORY-DAISIES-DB)
+workflows/    built-in example used by `init`
+tests/        engine-level unit tests
+docs/         diagrams and reference workflows
+```
+
+## Development
+
+```bash
+npm run typecheck   # tsc --noEmit
+npm test            # vitest
+npm run build       # tsc build
+```
+
+## License
+
+ISC — built by **Deysi Lopes**.
