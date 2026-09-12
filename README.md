@@ -170,7 +170,6 @@ skills/       agnostic SKILL.md templates
 examples/     sample workflows (STORY-001, STORY-002, STORY-DAISIES-DB)
 workflows/    built-in example used by `init`
 tests/        engine-level unit tests
-docs/         diagrams and reference workflows
 ```
 
 ## Development

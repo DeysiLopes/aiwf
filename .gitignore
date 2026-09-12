@@ -4,5 +4,6 @@ artifacts/
 .env
 docs
 .idea
-.agents/artifacts/
+.agents/
+.aiwf/
 relatorio-implementacao-*.md
