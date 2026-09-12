@@ -1,6 +1,6 @@
 ---
 name: gitflow-pipeline
-description: "Blueprint to build the Git Flow release esteira (CI + auto-PR + release promote + publish) with GitHub Actions, as implemented in this repository. Use when setting up .github/workflows for a new repo, when asked to 'build the gitflow pipeline', 'replicate the release automation', 'automate PRs', or when a workflow push is not triggering the next workflow. Covers the event chain, semver derivation from conventional commits, idempotent auto-PR, tags, npm publish, and the GITHUB_TOKEN recursive-trigger pitfall."
+description: "Blueprint to build the Git Flow release esteira (CI + auto-PR + release promote + publish) with GitHub Actions, as implemented in this repository. Use when setting up .github/workflows for a new repo, when asked to 'build the gitflow pipeline', 'replicate the release automation', 'automate PRs', or when a workflow push is not triggering the next workflow. Covers the event chain, semver derivation from conventional commits, idempotent auto-PR, tags, npm publish, the GITHUB_TOKEN recursive-trigger pitfall (extends to tags: the pushing actor creates the release), and the can_approve_pull_request_reviews repo setting required for Actions to create PRs."
 ---
 
 # Git Flow Pipeline — Building the Esteira
@@ -45,10 +45,13 @@ Files (all under `.github/workflows/`):
 
 ## Step-by-Step Build Recipe
 
-### 0. Branch protection (repository settings)
+### 0. Branch protection + repository settings
 
-- Protect `develop` and `main` (require PR + one approving review + status checks). Allow repo admins/PRs only.
+- Protect `develop` and `main`: require a **pull request before merging** + the CI status check (`contexts: ["validate"]`). If you require an **approving review**, the repo owner cannot approve their own PRs — automated release PRs would be blocked; use `required_approving_review_count: 0` or skip the review block.
 - Do **not** protect `feature/**` or `release/**` — the pipeline must be able to create/push them.
+- Enable **"Allow GitHub Actions to create and approve pull requests"** (Settings → Actions → General → Workflow permissions). API: `can_approve_pull_request_reviews: true` on `actions/permissions/workflow`. Without it, `gh pr create` fails with *GraphQL: GitHub Actions is not permitted to create or approve pull requests (createPullRequest)* — the `GITHUB_TOKEN` cannot call the GraphQL `createPullRequest` mutation (see pitfall 8).
+- Keep `default_workflow_permissions: "read"` and declare the scopes explicitly per job (`permissions:`) — least privilege.
+- **Protect branches via the API** (repo admins only; a workflow token can't set it): `PUT /repos/{owner}/{repo}/branches/{branch}/protection`.
 
 ### 1. CI for `develop` and `main`
 
@@ -184,6 +187,8 @@ jobs:
 
 ### 5. Publish on tag
 
+> **Read first:** `on: push: tags` only fires for tags pushed **out-of-band** (user/personal token). Tags pushed by a workflow (`GITHUB_TOKEN`) never trigger it — in automated flows the **promote job creates the release itself** (build the bundle + `gh release create`), and this workflow stays as an idempotent fallback for manual tags. See pitfall 1.
+
 `on: push: tags: ['v*']`. Runs the artifact build and publishes. For npm:
 
 ```yaml
@@ -221,21 +226,23 @@ Read tags correctly: `git tag --list 'v*' --sort=-v:refname` (semver-aware) — 
 
 ## Critical Pitfalls (learned the hard way)
 
-1. **`on: push` does NOT fire for pushes made with `GITHUB_TOKEN`.** A workflow that pushes `release/**` will *not* trigger `create-pr-release-to-main.yml` on that same push. Fix: the promote job **opens its own PR to main** instead of relying on the follower workflow. The `release/**` workflow stays only as an out-of-band recovery path.
+1. **`on: push` does NOT fire for pushes made with `GITHUB_TOKEN`.** A workflow that pushes `release/**` will *not* trigger `create-pr-release-to-main.yml` on that same push. Fix: the promote job **opens its own PR to main** instead of relying on the follower workflow. The `release/**` workflow stays only as an out-of-band recovery path. **Same rule applies to tags:** a tag pushed from inside a workflow never fires `on: push: tags`, so the actor that pushes the tag **must create the GitHub Release / publish the artifact itself** (promote builds the bundle and runs `gh release create`). The `on: push: tags` workflow only fires for out-of-band pushes (user/personal token) — keep it as a fallback, made idempotent (`gh release view` → edit/upload instead of create).
 2. **Conflict fallback must be `git reset --hard origin/develop`**, not `git checkout origin/develop -- .`. The checkout form only overwrites/adds files that exist — it leaves files *deleted on develop* present in the release branch, producing a dirty, merge-hostile tree.
 3. **Always guard `create-branch-from-main` paths**: if `main` doesn't exist yet, or `develop` is not ahead of it (`compare.ahead_by == 0`), skip. Otherwise you create `release/vX.Y.Z` from nothing / with no contents and push empty PRs.
 4. **Concurrency + idempotency.** Give the promote job a global `concurrency` group (`cancel-in-progress: true`) so rapid pushes to `develop` don't race two release branches. On PR workflows, `gh pr list --head/--base` → edit (not create) to avoid duplicate PRs.
 5. **Least-privilege permissions per workflow.** Only `contents: write`/`pull-requests: write` where needed (promote/publish or PR-openers respectively). CI needs no write perms at all.
 6. **Set both `GITHUB_TOKEN` and `GH_TOKEN`** env on any job that uses the `gh` CLI inside a script — `gh` needs `GH_TOKEN`; the API/`git push` paths use `GITHUB_TOKEN`.
 7. Use `actions/checkout@v4` with `fetch-depth: 0` (+ `fetch-tags: true`) wherever you need branch history/tags (versioning, merge). Plain shallow checkout breaks both.
+8. **PR creation from Actions is opt-in per repo.** Enable *Allow GitHub Actions to create and approve pull requests* (`can_approve_pull_request_reviews: true`), otherwise `gh pr create` (GraphQL `createPullRequest`) is refused even with `pull-requests: write`. DIY: if you can't toggle the setting, create PRs via the REST endpoint `POST /repos/{owner}/{repo}/pulls` (`gh api -X POST ...`) instead of `gh pr create`.
 
 ## Acceptance Checklist
 
 - [ ] `develop` and `main` protected; `feature/**`/`release/**` writable by the pipeline.
 - [ ] Push to `feature/x` opens/updates PR → `develop` (idempotent).
 - [ ] Merge to `develop` runs CI and triggers promote → `release/vX.Y.Z` + tag.
+- [ ] "Allow GitHub Actions to create and approve pull requests" enabled (`can_approve_pull_request_reviews: true`).
 - [ ] Promote opens PR `release/` → `main` (not relying on the follower workflow).
-- [ ] Tag `v*` push runs publish; artifact/npm released with correct version.
+- [ ] The actor that pushes tag `v*` also creates the GitHub Release (bundle/artifact) — workflow-pushed tags don't fire `on: push: tags`.
 - [ ] `ahead_by`/`main-exists` guards prevent empty releases.
 - [ ] Git metadata (fetch-depth, tags) and both tokens set on all `gh`-using jobs.
 
