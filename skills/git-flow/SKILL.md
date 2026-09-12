@@ -42,10 +42,6 @@ Use this knowledge whenever agent is **creating branch, committing, or pushing c
 - **Don't** use `git add .` (avoids uploading unrelated file); add specific paths.
 - **Don't** upload tool artifacts: tool directories, `node_modules/`, build artifacts, compiled files.
 
-## 5. Access / Proxy
-- Internet/artifacts via **proxy** configuration if required by organization.
-- See troubleshooting documentation for proxy setup details.
-
 ## Where This is Used in Workflow
 
 - **Implement/closer phases**: create `feature/<...>`, commit in English, push → pipeline opens PR.
