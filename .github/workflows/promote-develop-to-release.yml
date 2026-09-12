@@ -94,11 +94,9 @@ jobs:
           if git merge origin/develop -m "chore: merge develop into $RELEASE_BRANCH"; then
             echo "Merge succeeded (no conflicts)"
           else
-            echo "Merge conflict detected — resolving by accepting develop's changes"
+            echo "Merge conflict detected — adopting develop's tree"
             git merge --abort
-            # Fallback: overwrite with develop content to avoid manual resolution
-            git checkout origin/develop -- .
-            git commit -m "chore: resolve conflicts by adopting develop state for $RELEASE_BRANCH"
+            git reset --hard origin/develop
           fi
 
           echo "=== Tagging $TAG ==="
@@ -111,4 +109,12 @@ jobs:
           git push origin "$RELEASE_BRANCH"
           git push origin "$TAG"
 
-          echo "=== Skipping PR to main (create-pr-release-to-main.yml handles it on push to release/**) ==="
+          echo "=== Opening PR $RELEASE_BRANCH → main ==="
+          PR=$(gh pr list --repo "${{ github.repository }}" --base main --head "$RELEASE_BRANCH" --state open --json number -q '.[0].number' 2>/dev/null || echo "")
+          if [ -n "$PR" ]; then
+            gh pr edit "$PR" --repo "${{ github.repository }}" --title "Release $TAG" --body "Automated release promote: \`develop\` → \`main\` via $RELEASE_BRANCH (tag \`$TAG\`)."
+          else
+            gh pr create --repo "${{ github.repository }}" --base main --head "$RELEASE_BRANCH" \
+              --title "Release $TAG" \
+              --body "Automated release promote: \`develop\` → \`main\` via $RELEASE_BRANCH (tag \`$TAG\`)."
+          fi
